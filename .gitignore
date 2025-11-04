@@ -1,0 +1,13 @@
+# Build folder di Arduino
+/build
+/.pio
+/.vscode
+
+# File temporanei
+*.tmp
+*.bak
+*.swp
+
+# Librerie di terzi
+/libraries/*
+
