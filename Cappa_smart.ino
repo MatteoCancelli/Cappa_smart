@@ -1,42 +1,42 @@
 #include <Wire.h>
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_BME680.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-String msg_mod = "";
-
 // BME688 a indirizzo 0x76 (o 0x77 se hai collegato ADDR a VCC)
 Adafruit_BME680 bme;
+float temp, hum, gas_index;
+String msg_mod = "";
 
 // Funzione per convertire resistenza gas in Air Quality Index (0-100)
-float gas_to_AirQualityIndex(double gasOhm) {
+float gas_to_AirQualityIndex(double gas_ohm) {
   const double GAS_MIN = 10000.0;   // 10 kΩ = aria pessima
   const double GAS_MAX = 120000.0;  // 120 kΩ = aria pulita
 
-  if (gasOhm < GAS_MIN) gasOhm = GAS_MIN;
-  if (gasOhm > GAS_MAX) gasOhm = GAS_MAX;
+  if (gas_ohm < GAS_MIN) gas_ohm = GAS_MIN;
+  if (gas_ohm > GAS_MAX) gas_ohm = GAS_MAX;
 
-  int aqi = (int)((gasOhm - GAS_MIN) / (GAS_MAX - GAS_MIN) * 100);
+  int aqi = (int)((gas_ohm - GAS_MIN) / (GAS_MAX - GAS_MIN) * 100);
   return aqi;
 }
 
 // Funzione che converte AQI (%) in messaggio leggibile
-String air_index_to_msg(float g) {
-  if (g < 20)      return "Apri tutto";     // pessima
-  else if (g < 40) return "Aria stantia";    // scarsa
-  else if (g < 60) return "Aria viziata";   // media
-  else if (g < 80) return "Aria normale";   // buona
-  else             return "Aria fresca";    // ottima
+String air_index_to_msg(float gas_index) {
+  if      (gas_index < 20) return "Apri tutto";     // pessima
+  else if (gas_index < 40) return "Aria stantia";   // scarsa
+  else if (gas_index < 60) return "Aria viziata";   // media
+  else if (gas_index < 80) return "Aria normale";   // buona
+  else                     return "Aria fresca";    // ottima
 }
 
 void visualizza_msg_scorrevole(String msg){
   if (msg.length() > 11){
-    Serial.println(msg_mod);
-    Serial.println("------------------");
     display.print(msg_mod);
     msg_mod.remove(0,1);
   }
@@ -82,6 +82,51 @@ void check_bme(){
   delay(1000);
 }
 
+void task_bme(void *pvParameters){
+  for(;;) {
+    if (!bme.performReading()) {
+    Serial.println("Lettura fallita!");
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.println("Lettura fallita!");
+    display.display();
+    delay(1000);
+    return;
+    }
+    else {
+      temp = bme.temperature;
+      hum  = bme.humidity;
+      gas_index = gas_to_AirQualityIndex(bme.gas_resistance);
+    }
+    vTaskDelay(pdMS_TO_TICKS(2000)); 
+  }
+}
+
+void task_display(void *pvParameters){
+  for(;;) {
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.setTextSize(1);
+    display.print("Temperatura:  "); display.print(temp, 1); display.println(" C");
+    display.setCursor(0, 12);
+    display.print("Umidita:      "); display.print(hum, 1); display.println(" %");
+    display.setCursor(0, 24);
+    display.print("Qualita aria: "); display.print(gas_index, 1); display.println(" %");
+    display.setCursor(0, 48);
+    display.setTextSize(2);
+
+    String msg = air_index_to_msg(gas_index);
+    if (msg_mod.length() < 10)
+      msg_mod = msg;  
+
+    visualizza_msg_scorrevole(msg);
+    display.display();
+
+    vTaskDelay(pdMS_TO_TICKS(500)); 
+  }
+}
+
+
 void setup(){
   Serial.begin(115200);
   Wire.begin(); //I2C
@@ -95,51 +140,12 @@ void setup(){
   bme.setHumidityOversampling(BME680_OS_2X);
   bme.setPressureOversampling(BME680_OS_4X);
   bme.setGasHeater(300, 150);
+
+  xTaskCreate(task_bme, "BME", 4096, NULL, 1, NULL);
+  xTaskCreate(task_display, "Display", 4096, NULL, 1, NULL);
+  
 }
 
-// void loop(){
-
-// }
-
-void loop() {
-  if (!bme.performReading()) {
-    Serial.println("⚠️ Lettura fallita!");
-    display.clearDisplay();
-    display.setCursor(0, 0);
-    display.println("Lettura fallita!");
-    display.display();
-    delay(1000);
-    return;
-  }
-
-  float t = bme.temperature;
-  float h = bme.humidity;
-  float g = gas_to_AirQualityIndex(bme.gas_resistance);
-  String msg = air_index_to_msg(g);   
-  if (msg_mod.length() < 10)
-    msg_mod = msg; 
-
-  Serial.print("Temperatura:  "); Serial.print(t); Serial.println(" °C");
-  Serial.print("Umidità:      "); Serial.print(h); Serial.println(" %");
-  Serial.print("Qualità aria: "); Serial.print(g); Serial.print(" %"); 
-  Serial.println(msg);
-  Serial.println("------------------");
-
-  display.clearDisplay();
-  display.setCursor(0, 0);
-  display.setTextSize(1);
-  display.print("Temperatura:  "); display.print(t, 1); display.println(" C");
-  display.setCursor(0, 12);
-  display.print("Umidita:      "); display.print(h, 1); display.println(" %");
-  display.setCursor(0, 24);
-  display.print("Qualita aria: "); display.print(g, 1); display.println(" %");
-
-  display.setCursor(0, 48);
-  display.setTextSize(2);
-  visualizza_msg_scorrevole(msg);
-
-
-  display.display();
-
-  delay(2000);
+void loop(){
 }
+
