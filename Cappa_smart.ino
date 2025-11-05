@@ -7,6 +7,8 @@
 #define OLED_RESET -1
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
+String msg_mod = "";
+
 // BME688 a indirizzo 0x76 (o 0x77 se hai collegato ADDR a VCC)
 Adafruit_BME680 bme;
 
@@ -24,14 +26,24 @@ float gas_to_AirQualityIndex(double gasOhm) {
 
 // Funzione che converte AQI (%) in messaggio leggibile
 String air_index_to_msg(float g) {
-  if (g < 20)      return "Apri tutto!";     // pessima
+  if (g < 20)      return "Apri tutto";     // pessima
   else if (g < 40) return "Aria stantia";    // scarsa
   else if (g < 60) return "Aria viziata";   // media
   else if (g < 80) return "Aria normale";   // buona
   else             return "Aria fresca";    // ottima
 }
 
-String msg_mod = "";
+void visualizza_msg_scorrevole(String msg){
+  if (msg.length() > 11){
+    Serial.println(msg_mod);
+    Serial.println("------------------");
+    display.print(msg_mod);
+    msg_mod.remove(0,1);
+  }
+  else{
+    display.print(msg);
+  }
+}
 
 void setup() {
   Serial.begin(115200);
@@ -121,16 +133,8 @@ void loop() {
 
   display.setCursor(0, 48);
   display.setTextSize(2);
+  visualizza_msg_scorrevole(msg);
 
-  if (msg.length() > 11){
-    Serial.println(msg_mod);
-    Serial.println("------------------");
-    display.print(msg_mod);
-    msg_mod.remove(0,1);
-  }
-  else{
-    display.print(msg);
-  }
 
   display.display();
 
