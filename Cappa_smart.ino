@@ -4,6 +4,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#define PIR_GPIO 15
+#define LED_GPIO 2
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
@@ -126,6 +128,21 @@ void task_display(void *pvParameters){
   }
 }
 
+void task_pir(void *pvParameters){
+  pinMode(PIR_GPIO, INPUT);
+  pinMode(LED_GPIO, OUTPUT);
+
+  for(;;){
+    int pir_state = digitalRead(PIR_GPIO);
+
+    if (pir_state == HIGH)
+      digitalWrite(LED_GPIO, HIGH);
+    else
+      digitalWrite(LED_GPIO, LOW);
+  }
+  vTaskDelay(pdMS_TO_TICKS(200));
+}
+
 
 void setup(){
   Serial.begin(115200);
@@ -143,6 +160,7 @@ void setup(){
 
   xTaskCreate(task_bme, "BME", 4096, NULL, 1, NULL);
   xTaskCreate(task_display, "Display", 4096, NULL, 1, NULL);
+  xTaskCreate(task_pir, "PIR", 4096, NULL, 2, NULL);
   
 }
 
