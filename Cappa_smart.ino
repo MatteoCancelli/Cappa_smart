@@ -6,6 +6,7 @@
 
 #define PIR_GPIO 15
 #define LED_GPIO 2
+#define VENTOLA_GPIO 17
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
@@ -13,7 +14,9 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // BME688 a indirizzo 0x76 (o 0x77 se hai collegato ADDR a VCC)
 Adafruit_BME680 bme;
-float temp, hum, gas_index;
+volatile float temp = 0;
+volatile float hum = 0;
+volatile float gas_index = 0;
 String msg_mod = "";
 
 // Funzione per convertire resistenza gas in Air Quality Index (0-100)
@@ -29,11 +32,11 @@ float gas_to_AirQualityIndex(double gas_ohm) {
 }
 
 // Funzione che converte AQI (%) in messaggio leggibile
-String air_index_to_msg(float gas_index) {
-  if      (gas_index < 20) return "Apri tutto";     // pessima
-  else if (gas_index < 40) return "Aria stantia";   // scarsa
-  else if (gas_index < 60) return "Aria viziata";   // media
-  else if (gas_index < 80) return "Aria normale";   // buona
+String air_index_to_msg(float quality_index) {
+  if      (quality_index < 20) return "Apri tutto";     // pessima
+  else if (quality_index < 40) return "Aria stantia";   // scarsa
+  else if (quality_index < 60) return "Aria viziata";   // media
+  else if (quality_index < 80) return "Aria normale";   // buona
   else                     return "Aria fresca";    // ottima
 }
 
@@ -139,8 +142,38 @@ void task_pir(void *pvParameters){
       digitalWrite(LED_GPIO, HIGH);
     else
       digitalWrite(LED_GPIO, LOW);
+
+    vTaskDelay(pdMS_TO_TICKS(200));
   }
-  vTaskDelay(pdMS_TO_TICKS(200));
+}
+
+void task_aspirazione(void *pvParameters){
+  pinMode(VENTOLA_GPIO, OUTPUT);
+  bool ventola_state = false;
+
+  for(;;){
+    if(gas_index != 0){
+      if (gas_index < 40 || hum > 75 || temp > 50 ){
+        if (!ventola_state){
+          ventola_state = true;
+          digitalWrite(VENTOLA_GPIO, HIGH);
+          Serial.print(gas_index);
+          Serial.println("Ventola in funzione");
+        }
+      }
+      else{
+        if (ventola_state){
+          ventola_state = false;
+          digitalWrite(VENTOLA_GPIO, LOW);
+          Serial.println("Ventola spenta");
+        }
+      }
+    }
+    if (ventola_state)
+      vTaskDelay(pdMS_TO_TICKS(60000));  
+    else
+      vTaskDelay(pdMS_TO_TICKS(200));    
+  }
 }
 
 
@@ -158,10 +191,10 @@ void setup(){
   bme.setPressureOversampling(BME680_OS_4X);
   bme.setGasHeater(300, 150);
 
-  xTaskCreate(task_bme, "BME", 4096, NULL, 1, NULL);
+  xTaskCreate(task_bme, "BME", 4096, NULL, 2, NULL);
   xTaskCreate(task_display, "Display", 4096, NULL, 1, NULL);
-  xTaskCreate(task_pir, "PIR", 4096, NULL, 2, NULL);
-  
+  xTaskCreate(task_pir, "PIR", 4096, NULL, 3, NULL);
+  xTaskCreate(task_aspirazione, "Ventola", 4096, NULL, 1, NULL);
 }
 
 void loop(){
