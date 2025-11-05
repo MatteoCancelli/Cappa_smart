@@ -12,8 +12,7 @@ Adafruit_BME680 bme;
 
 // Funzione per convertire resistenza gas in Air Quality Index (0-100)
 float gas_to_AirQualityIndex(double gasOhm) {
-
-  const double GAS_MIN = 10000.0;   // 10 kΩ = peggior aria
+  const double GAS_MIN = 10000.0;   // 10 kΩ = aria pessima
   const double GAS_MAX = 120000.0;  // 120 kΩ = aria pulita
 
   if (gasOhm < GAS_MIN) gasOhm = GAS_MIN;
@@ -22,6 +21,17 @@ float gas_to_AirQualityIndex(double gasOhm) {
   int aqi = (int)((gasOhm - GAS_MIN) / (GAS_MAX - GAS_MIN) * 100);
   return aqi;
 }
+
+// Funzione che converte AQI (%) in messaggio leggibile
+String air_index_to_msg(float g) {
+  if (g < 20)      return "Apri tutto!";     // pessima
+  else if (g < 40) return "Aria stantia";    // scarsa
+  else if (g < 60) return "Aria viziata";   // media
+  else if (g < 80) return "Aria normale";   // buona
+  else             return "Aria fresca";    // ottima
+}
+
+String msg_mod = "";
 
 void setup() {
   Serial.begin(115200);
@@ -90,19 +100,38 @@ void loop() {
   float t = bme.temperature;
   float h = bme.humidity;
   float g = gas_to_AirQualityIndex(bme.gas_resistance);
+  String msg = air_index_to_msg(g);   
+  if (msg_mod.length() < 10)
+    msg_mod = msg; 
 
   Serial.print("Temperatura:  "); Serial.print(t); Serial.println(" °C");
   Serial.print("Umidità:      "); Serial.print(h); Serial.println(" %");
-  Serial.print("Qualità aria: "); Serial.print(g); Serial.println(" %");
+  Serial.print("Qualità aria: "); Serial.print(g); Serial.print(" %"); 
+  Serial.println(msg);
   Serial.println("------------------");
 
   display.clearDisplay();
   display.setCursor(0, 0);
-  display.print("Temperatura:  "); display.print(t, 2); display.println(" C");
-  display.setCursor(0, 10);
-  display.print("Umidita:      "); display.print(h, 2); display.println(" %");
-  display.setCursor(0, 20);
-  display.print("Qualita aria: "); display.print(g, 2); display.println(" %");
+  display.setTextSize(1);
+  display.print("Temperatura:  "); display.print(t, 1); display.println(" C");
+  display.setCursor(0, 12);
+  display.print("Umidita:      "); display.print(h, 1); display.println(" %");
+  display.setCursor(0, 24);
+  display.print("Qualita aria: "); display.print(g, 1); display.println(" %");
+
+  display.setCursor(0, 48);
+  display.setTextSize(2);
+
+  if (msg.length() > 11){
+    Serial.println(msg_mod);
+    Serial.println("------------------");
+    display.print(msg_mod);
+    msg_mod.remove(0,1);
+  }
+  else{
+    display.print(msg);
+  }
+
   display.display();
 
   delay(2000);
