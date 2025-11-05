@@ -45,19 +45,14 @@ void visualizza_msg_scorrevole(String msg){
   }
 }
 
-void setup() {
-  Serial.begin(115200);
-  delay(500);
-
-  // Avvio I2C
-  Wire.begin(); // usa i pin di default dell’ESP32: SDA=21, SCL=22
-  Wire.setClock(100000);
-
+void check_display(){
   Serial.println("=== Avvio Display ===");
+
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.println("❌ Errore display");
+    Serial.println("Errore display");
     while (true);
   }
+
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
@@ -66,15 +61,11 @@ void setup() {
   display.display();
 
   delay(1000);
+}
 
-  Serial.println("=== Avvio BME688 ===");
-  display.clearDisplay();
-  display.setCursor(0, 0);
-  display.println("Inizializzo BME...");
-  display.display();
-
+void check_bme(){
   if (!bme.begin(0x76)) {
-    Serial.println("❌ Errore: BME688 non trovato!");
+    Serial.println("Errore: BME688 non trovato!");
     display.clearDisplay();
     display.setCursor(0, 0);
     display.println("ERRORE BME688");
@@ -83,20 +74,32 @@ void setup() {
     display.display();
     while (true);
   }
-
-  Serial.println("✅ BME688 trovato!");
+  Serial.println("BME688 trovato!");
   display.clearDisplay();
   display.setCursor(0, 0);
-  display.println("BME688 OK!");
+  display.println("BME688 OK");
   display.display();
   delay(1000);
+}
 
-  // Impostazioni base
+void setup(){
+  Serial.begin(115200);
+  Wire.begin(); //I2C
+  Wire.setClock(100000);
+
+  check_display();
+
+  check_bme();
+
   bme.setTemperatureOversampling(BME680_OS_8X);
   bme.setHumidityOversampling(BME680_OS_2X);
   bme.setPressureOversampling(BME680_OS_4X);
   bme.setGasHeater(300, 150);
 }
+
+// void loop(){
+
+// }
 
 void loop() {
   if (!bme.performReading()) {
