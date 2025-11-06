@@ -4,9 +4,14 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#define GPIO_PIR 15
+#define GPIO_PIR 23
 #define GPIO_LED 2
 #define GPIO_VENTOLA 17
+#define GPIO_POTENZIOMETRO 34
+#define GPIO_BTN_SPEED_AUTO 18
+#define GPIO_LED_SPEED_AUTO 19
+
+// SDA = 21, SCL = 22
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
@@ -17,6 +22,8 @@ Adafruit_BME680 bme;
 volatile float temp = 0;
 volatile float hum = 0;
 volatile float gas_index = 0;
+bool lamp_state = false;
+int button_last_state = HIGH;
 String msg_mod = "";
 
 // Funzione per convertire resistenza gas in Air Quality Index (0-100)
@@ -176,6 +183,25 @@ void task_aspirazione(void *pvParameters){
   }
 }
 
+void task_btn_speed_auto(void *pvParameters){
+  pinMode(GPIO_BTN_SPEED_AUTO, INPUT_PULLUP);
+  pinMode(GPIO_LED_SPEED_AUTO, OUTPUT);
+
+  for (;;) {
+    int button_state = digitalRead(GPIO_BTN_SPEED_AUTO);
+
+    if (button_state == LOW && button_last_state == HIGH) {
+      lamp_state = !lamp_state;  
+      digitalWrite(GPIO_LED_SPEED_AUTO, lamp_state ? HIGH : LOW);
+      Serial.printf("LED %s\n", lamp_state ? "ON (Manuale)" : "OFF (Automatico)");
+      vTaskDelay(pdMS_TO_TICKS(200)); 
+    }
+
+    button_last_state = button_state;
+    vTaskDelay(pdMS_TO_TICKS(50)); 
+  }
+}
+
 
 void setup(){
   Serial.begin(115200);
@@ -195,6 +221,7 @@ void setup(){
   xTaskCreate(task_display, "Display", 4096, NULL, 1, NULL);
   xTaskCreate(task_pir, "PIR", 4096, NULL, 3, NULL);
   xTaskCreate(task_aspirazione, "Ventola", 4096, NULL, 1, NULL);
+  xTaskCreate(task_btn_speed_auto, "btn_auto", 4096, NULL, 1, NULL);
 }
 
 void loop(){
