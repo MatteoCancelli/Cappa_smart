@@ -4,15 +4,15 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#define PIR_GPIO 15
-#define LED_GPIO 2
-#define VENTOLA_GPIO 17
+#define GPIO_PIR 15
+#define GPIO_LED 2
+#define GPIO_VENTOLA 17
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-// BME688 a indirizzo 0x76 (o 0x77 se hai collegato ADDR a VCC)
+// BME688 a indirizzo 0x76 (o 0x77 se collegato ADDR a VCC)
 Adafruit_BME680 bme;
 volatile float temp = 0;
 volatile float hum = 0;
@@ -33,15 +33,15 @@ float gas_to_AirQualityIndex(double gas_ohm) {
 
 // Funzione che converte AQI (%) in messaggio leggibile
 String air_index_to_msg(float quality_index) {
-  if      (quality_index < 20) return "Apri tutto";     // pessima
-  else if (quality_index < 40) return "Aria stantia";   // scarsa
-  else if (quality_index < 60) return "Aria viziata";   // media
-  else if (quality_index < 80) return "Aria normale";   // buona
-  else                     return "Aria fresca";    // ottima
+  if      (quality_index < 20)  return "Apri tutto";     // pessima
+  else if (quality_index < 40)  return "Aria stantia";   // scarsa
+  else if (quality_index < 60)  return "Aria viziata";   // media
+  else if (quality_index < 80)  return "Aria normale";   // buona
+  else                          return "Aria fresca";    // ottima
 }
 
 void visualizza_msg_scorrevole(String msg){
-  if (msg.length() > 11){
+  if (msg.length() >= 10){
     display.print(msg_mod);
     msg_mod.remove(0,1);
   }
@@ -132,23 +132,23 @@ void task_display(void *pvParameters){
 }
 
 void task_pir(void *pvParameters){
-  pinMode(PIR_GPIO, INPUT);
-  pinMode(LED_GPIO, OUTPUT);
+  pinMode(GPIO_PIR, INPUT);
+  pinMode(GPIO_LED, OUTPUT);
 
   for(;;){
-    int pir_state = digitalRead(PIR_GPIO);
+    int pir_state = digitalRead(GPIO_PIR);
 
     if (pir_state == HIGH)
-      digitalWrite(LED_GPIO, HIGH);
+      digitalWrite(GPIO_LED, HIGH);
     else
-      digitalWrite(LED_GPIO, LOW);
+      digitalWrite(GPIO_LED, LOW);
 
     vTaskDelay(pdMS_TO_TICKS(200));
   }
 }
 
 void task_aspirazione(void *pvParameters){
-  pinMode(VENTOLA_GPIO, OUTPUT);
+  pinMode(GPIO_VENTOLA, OUTPUT);
   bool ventola_state = false;
 
   for(;;){
@@ -156,7 +156,7 @@ void task_aspirazione(void *pvParameters){
       if (gas_index < 40 || hum > 75 || temp > 50 ){
         if (!ventola_state){
           ventola_state = true;
-          digitalWrite(VENTOLA_GPIO, HIGH);
+          digitalWrite(GPIO_VENTOLA, HIGH);
           Serial.print(gas_index);
           Serial.println("Ventola in funzione");
         }
@@ -164,7 +164,7 @@ void task_aspirazione(void *pvParameters){
       else{
         if (ventola_state){
           ventola_state = false;
-          digitalWrite(VENTOLA_GPIO, LOW);
+          digitalWrite(GPIO_VENTOLA, LOW);
           Serial.println("Ventola spenta");
         }
       }
@@ -199,4 +199,3 @@ void setup(){
 
 void loop(){
 }
-
