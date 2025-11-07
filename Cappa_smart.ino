@@ -22,7 +22,6 @@ Adafruit_BME680 bme;
 volatile float temp = 0;
 volatile float hum = 0;
 volatile float gas_index = 0;
-bool lamp_state = false;
 String msg_mod = "";
 
 // Funzione per convertire resistenza gas in Air Quality Index (0-100)
@@ -186,6 +185,7 @@ void task_btn_speed_auto(void *pvParameters){
   pinMode(GPIO_BTN_SPEED_AUTO, INPUT_PULLUP);
   pinMode(GPIO_LED_SPEED_AUTO, OUTPUT);
   int button_last_state = HIGH;
+  bool lamp_state = false;
 
   for (;;) {
     int button_state = digitalRead(GPIO_BTN_SPEED_AUTO);
