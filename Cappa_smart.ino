@@ -5,7 +5,7 @@
 #include "freertos/task.h"
 
 #define GPIO_PIR 23
-#define GPIO_LED 2
+#define GPIO_LAMP 5
 #define GPIO_VENTOLA 17
 #define GPIO_POTENZIOMETRO 34
 #define GPIO_BTN_SPEED_AUTO 18
@@ -134,17 +134,30 @@ void task_display(void *pvParameters){
   }
 }
 
-void task_pir(void *pvParameters){
-  pinMode(GPIO_PIR, INPUT);
-  pinMode(GPIO_LED, OUTPUT);
+void task_pir(void *pvParameters) {
+  TickType_t last_motion_time = 0;
+  bool lamp_on = false;
 
-  for(;;){
-    int pir_state = digitalRead(GPIO_PIR);
+  gpio_set_direction((gpio_num_t)GPIO_PIR, GPIO_MODE_INPUT);
+  gpio_set_direction((gpio_num_t)GPIO_LAMP, GPIO_MODE_OUTPUT);
+  gpio_set_level((gpio_num_t)GPIO_LAMP, 0);
 
-    if (pir_state == HIGH)
-      digitalWrite(GPIO_LED, HIGH);
-    else
-      digitalWrite(GPIO_LED, LOW);
+  for (;;) {
+    int pir_state = gpio_get_level((gpio_num_t)GPIO_PIR);
+
+    if (pir_state == 1) {
+      last_motion_time = xTaskGetTickCount();
+      if (!lamp_on) {
+          gpio_set_level((gpio_num_t)GPIO_LAMP, 1);
+          lamp_on = true;
+      }
+    }
+
+    if (lamp_on &&
+      (xTaskGetTickCount() - last_motion_time > pdMS_TO_TICKS(5000))) {
+      gpio_set_level((gpio_num_t)GPIO_LAMP, 0);
+      lamp_on = false;
+    }
 
     vTaskDelay(pdMS_TO_TICKS(100));
   }
