@@ -23,7 +23,6 @@ volatile float temp = 0;
 volatile float hum = 0;
 volatile float gas_index = 0;
 bool lamp_state = false;
-int button_last_state = HIGH;
 String msg_mod = "";
 
 // Funzione per convertire resistenza gas in Air Quality Index (0-100)
@@ -34,7 +33,7 @@ float gas_to_AirQualityIndex(double gas_ohm) {
   if (gas_ohm < GAS_MIN) gas_ohm = GAS_MIN;
   if (gas_ohm > GAS_MAX) gas_ohm = GAS_MAX;
 
-  int aqi = (int)((gas_ohm - GAS_MIN) / (GAS_MAX - GAS_MIN) * 100);
+  float aqi = (gas_ohm - GAS_MIN) / (GAS_MAX - GAS_MIN) * 100;
   return aqi;
 }
 
@@ -58,8 +57,6 @@ void visualizza_msg_scorrevole(String msg){
 }
 
 void check_display(){
-  Serial.println("=== Avvio Display ===");
-
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
     Serial.println("Errore display");
     while (true);
@@ -150,42 +147,45 @@ void task_pir(void *pvParameters){
     else
       digitalWrite(GPIO_LED, LOW);
 
-    vTaskDelay(pdMS_TO_TICKS(200));
+    vTaskDelay(pdMS_TO_TICKS(100));
   }
 }
 
-void task_aspirazione(void *pvParameters){
+void task_aspirazione(void *pvParameters) {
   pinMode(GPIO_VENTOLA, OUTPUT);
   bool ventola_state = false;
+  unsigned long start_time = millis();
 
-  for(;;){
-    if(gas_index != 0){
-      if (gas_index < 40 || hum > 75 || temp > 50 ){
-        if (!ventola_state){
-          ventola_state = true;
-          digitalWrite(GPIO_VENTOLA, HIGH);
-          Serial.print(gas_index);
-          Serial.println("Ventola in funzione");
-        }
-      }
-      else{
-        if (ventola_state){
-          ventola_state = false;
-          digitalWrite(GPIO_VENTOLA, LOW);
-          Serial.println("Ventola spenta");
-        }
+  Serial.println("Ventola SPENTA - attendo riscaldamento sensore...");
+
+  //bme688 danneggiato. Servono 4,5 minuti perché si riscaldi abbastanza da capire che aqi >= 40% 
+  for (;;) {
+    if (millis() - start_time < 270000) 
+      continue;
+    Serial.println("QUI");
+    bool condizione_accensione = (gas_index < 40 || hum > 75 || temp > 50);
+
+    if (gas_index != 0) {
+      if (condizione_accensione && !ventola_state) {
+        ventola_state = true;
+        digitalWrite(GPIO_VENTOLA, HIGH);
+        Serial.println("Ventola ACCESA");
+      } 
+      else if (!condizione_accensione && ventola_state) {
+        ventola_state = false;
+        digitalWrite(GPIO_VENTOLA, LOW);
+        Serial.println("Ventola SPENTA");
       }
     }
-    if (ventola_state)
-      vTaskDelay(pdMS_TO_TICKS(60000));  
-    else
-      vTaskDelay(pdMS_TO_TICKS(200));    
+
+    vTaskDelay(pdMS_TO_TICKS(ventola_state ? 10000 : 200));
   }
 }
 
 void task_btn_speed_auto(void *pvParameters){
   pinMode(GPIO_BTN_SPEED_AUTO, INPUT_PULLUP);
   pinMode(GPIO_LED_SPEED_AUTO, OUTPUT);
+  int button_last_state = HIGH;
 
   for (;;) {
     int button_state = digitalRead(GPIO_BTN_SPEED_AUTO);
@@ -215,7 +215,9 @@ void setup(){
   bme.setTemperatureOversampling(BME680_OS_8X);
   bme.setHumidityOversampling(BME680_OS_2X);
   bme.setPressureOversampling(BME680_OS_4X);
-  bme.setGasHeater(300, 150);
+  bme.setGasHeater(320, 150);
+
+  Serial.println("Inizio Task");
 
   xTaskCreate(task_bme, "BME", 4096, NULL, 2, NULL);
   xTaskCreate(task_display, "Display", 4096, NULL, 1, NULL);
