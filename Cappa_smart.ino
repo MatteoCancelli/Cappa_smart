@@ -6,8 +6,8 @@
 
 #define GPIO_PIR 23
 #define GPIO_LAMP 5
+#define GPIO_POTENZIOMETRO 15
 #define GPIO_VENTOLA 17
-#define GPIO_POTENZIOMETRO 34
 #define GPIO_BTN_SPEED_AUTO 18
 #define GPIO_LED_SPEED_AUTO 19
 
@@ -23,6 +23,7 @@ volatile float temp = 0;
 volatile float hum = 0;
 volatile float gas_index = 0;
 String msg_mod = "";
+bool lamp_state = false;
 
 // Funzione per convertire resistenza gas in Air Quality Index (0-100)
 float gas_to_AirQualityIndex(double gas_ohm) {
@@ -138,10 +139,6 @@ void task_pir(void *pvParameters) {
   TickType_t last_motion_time = 0;
   bool lamp_on = false;
 
-  gpio_set_direction((gpio_num_t)GPIO_PIR, GPIO_MODE_INPUT);
-  gpio_set_direction((gpio_num_t)GPIO_LAMP, GPIO_MODE_OUTPUT);
-  gpio_set_level((gpio_num_t)GPIO_LAMP, 0);
-
   for (;;) {
     int pir_state = gpio_get_level((gpio_num_t)GPIO_PIR);
 
@@ -164,7 +161,6 @@ void task_pir(void *pvParameters) {
 }
 
 void task_aspirazione(void *pvParameters) {
-  pinMode(GPIO_VENTOLA, OUTPUT);
   bool ventola_state = false;
   unsigned long start_time = millis();
   bool flag_temp_heater_low = true;
@@ -198,10 +194,7 @@ void task_aspirazione(void *pvParameters) {
 }
 
 void task_btn_speed_auto(void *pvParameters){
-  pinMode(GPIO_BTN_SPEED_AUTO, INPUT_PULLUP);
-  pinMode(GPIO_LED_SPEED_AUTO, OUTPUT);
   int button_last_state = HIGH;
-  bool lamp_state = false;
 
   for (;;) {
     int button_state = digitalRead(GPIO_BTN_SPEED_AUTO);
@@ -218,8 +211,28 @@ void task_btn_speed_auto(void *pvParameters){
   }
 }
 
+void task_ventola_manuale(void *pvParameters) {
+  for (;;) {
+    if(lamp_state){
+      int pot_value = analogRead(GPIO_POTENZIOMETRO); 
+    }
+    vTaskDelay(pdMS_TO_TICKS(200));
+  }
+}
+
+void setup_GPIO(){
+  pinMode(GPIO_POTENZIOMETRO, INPUT);
+  pinMode(GPIO_BTN_SPEED_AUTO, INPUT_PULLUP);
+  pinMode(GPIO_LED_SPEED_AUTO, OUTPUT);
+  pinMode(GPIO_VENTOLA, OUTPUT);
+
+  gpio_set_direction((gpio_num_t)GPIO_PIR, GPIO_MODE_INPUT);
+  gpio_set_direction((gpio_num_t)GPIO_LAMP, GPIO_MODE_OUTPUT);
+  gpio_set_level((gpio_num_t)GPIO_LAMP, 0);
+}
 
 void setup(){
+  setup_GPIO();
   Serial.begin(115200);
   Wire.begin(); //I2C
   Wire.setClock(100000);
@@ -240,6 +253,7 @@ void setup(){
   xTaskCreate(task_pir, "PIR", 4096, NULL, 3, NULL);
   xTaskCreate(task_aspirazione, "Ventola", 4096, NULL, 1, NULL);
   xTaskCreate(task_btn_speed_auto, "btn_auto", 4096, NULL, 1, NULL);
+  xTaskCreate(task_ventola_manuale, "ventola_manuale", 4096, NULL, 1, NULL);
 }
 
 void loop(){
