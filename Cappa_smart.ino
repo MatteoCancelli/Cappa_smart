@@ -154,14 +154,17 @@ void task_aspirazione(void *pvParameters) {
   pinMode(GPIO_VENTOLA, OUTPUT);
   bool ventola_state = false;
   unsigned long start_time = millis();
+  bool flag_temp_heater_low = true;
 
   Serial.println("Ventola SPENTA - attendo riscaldamento sensore...");
 
   //bme688 danneggiato. Servono 4,5 minuti perché si riscaldi abbastanza da capire che aqi >= 40% 
   for (;;) {
-    if (millis() - start_time < 270000) 
+    if ((millis() - start_time < 270000 || gas_index < 40) && flag_temp_heater_low){
+      flag_temp_heater_low = false;
       continue;
-    Serial.println("QUI");
+    }
+
     bool condizione_accensione = (gas_index < 40 || hum > 75 || temp > 50);
 
     if (gas_index != 0) {
