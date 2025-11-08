@@ -1,17 +1,24 @@
+#include <Arduino.h>
+#include "esp32-hal-ledc.h"
 #include <Wire.h>
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_BME680.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+// SDA = 21, SCL = 22
 #define GPIO_PIR 23
 #define GPIO_LAMP 5
 #define GPIO_POTENZIOMETRO 15
-#define GPIO_VENTOLA 17
-#define GPIO_BTN_SPEED_AUTO 18
-#define GPIO_LED_SPEED_AUTO 19
+#define GPIO_BTN_FAN_CONTROLLER 18
+#define GPIO_LED_FAN_CONTROLLER 19
+#define GPIO_FAN_PWM 32
+#define GPIO_FAN_TACHIMETRO 33
 
-// SDA = 21, SCL = 22
+#define FAN_PWM_CHANNEL 0
+#define FAN_PWM_FREQ 25000
+#define FAN_PWM_RESOLUTION 8  // 0–255
+
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
@@ -24,6 +31,33 @@ volatile float hum = 0;
 volatile float gas_index = 0;
 String msg_mod = "";
 bool lamp_state = false;
+bool mode_manual = false;   // false = automatico
+bool ventola_on = false;
+int speed_ventola = 0;
+volatile int tach_pulse_count = 0;
+
+void IRAM_ATTR tachimetro_interrupt() {
+  tach_pulse_count++;
+}
+
+void set_fan_speed(uint8_t speed) {
+  ledcWrite(GPIO_FAN_PWM, speed);
+}
+
+float read_fan_rpm() {
+  static unsigned long last_time = 0;
+  static int last_pulses = 0;
+
+  unsigned long now = millis();
+  if (now - last_time >= 1000) {  
+    int pulses = tach_pulse_count - last_pulses;
+    last_pulses = tach_pulse_count;
+    last_time = now;
+    // La maggior parte delle ventole 4 fili genera 2 impulsi per giro
+    return (pulses / 2.0f) * 60.0f; // RPM
+  }
+  return -1;  // non aggiornato
+}
 
 // Funzione per convertire resistenza gas in Air Quality Index (0-100)
 float gas_to_AirQualityIndex(double gas_ohm) {
@@ -161,7 +195,6 @@ void task_pir(void *pvParameters) {
 }
 
 void task_aspirazione(void *pvParameters) {
-  bool ventola_state = false;
   unsigned long start_time = millis();
   bool flag_temp_heater_low = true;
 
@@ -176,33 +209,25 @@ void task_aspirazione(void *pvParameters) {
 
     bool condizione_accensione = (gas_index < 40 || hum > 75 || temp > 50);
 
-    if (gas_index != 0) {
-      if (condizione_accensione && !ventola_state) {
-        ventola_state = true;
-        digitalWrite(GPIO_VENTOLA, HIGH);
-        Serial.println("Ventola ACCESA");
-      } 
-      else if (!condizione_accensione && ventola_state) {
-        ventola_state = false;
-        digitalWrite(GPIO_VENTOLA, LOW);
-        Serial.println("Ventola SPENTA");
-      }
+    if (!mode_manual) {
+      ventola_on = condizione_accensione;
+      speed_ventola = ventola_on ? 150 : 0;
     }
 
-    vTaskDelay(pdMS_TO_TICKS(ventola_state ? 10000 : 200));
+    vTaskDelay(pdMS_TO_TICKS(2000));
   }
 }
 
-void task_btn_speed_auto(void *pvParameters){
+void task_check_btn_controllo_aspirazione(void *pvParameters){
   int button_last_state = HIGH;
 
   for (;;) {
-    int button_state = digitalRead(GPIO_BTN_SPEED_AUTO);
+    int button_state = digitalRead(GPIO_BTN_FAN_CONTROLLER);
 
     if (button_state == LOW && button_last_state == HIGH) {
-      lamp_state = !lamp_state;  
-      digitalWrite(GPIO_LED_SPEED_AUTO, lamp_state ? HIGH : LOW);
-      Serial.printf("LED %s\n", lamp_state ? "ON (Manuale)" : "OFF (Automatico)");
+      mode_manual = !mode_manual;
+      digitalWrite(GPIO_LED_FAN_CONTROLLER, mode_manual ? HIGH : LOW);
+      Serial.printf("Modalità: %s\n", mode_manual ? "MANUALE" : "AUTOMATICA");
       vTaskDelay(pdMS_TO_TICKS(200)); 
     }
 
@@ -211,24 +236,34 @@ void task_btn_speed_auto(void *pvParameters){
   }
 }
 
-void task_ventola_manuale(void *pvParameters) {
+void task_ventola_controller(void *pvParameters) {
   for (;;) {
-    if(lamp_state){
-      int pot_value = analogRead(GPIO_POTENZIOMETRO); 
+    if (mode_manual) {
+      int pot_value = analogRead(GPIO_POTENZIOMETRO);
+      speed_ventola = map(pot_value, 0, 4095, 0, 255);
+      ventola_on = speed_ventola > 10;
     }
-    vTaskDelay(pdMS_TO_TICKS(200));
+
+    set_fan_speed(ventola_on ? speed_ventola : 0);
+
+    vTaskDelay(pdMS_TO_TICKS(1000));
   }
 }
 
+
 void setup_GPIO(){
   pinMode(GPIO_POTENZIOMETRO, INPUT);
-  pinMode(GPIO_BTN_SPEED_AUTO, INPUT_PULLUP);
-  pinMode(GPIO_LED_SPEED_AUTO, OUTPUT);
-  pinMode(GPIO_VENTOLA, OUTPUT);
+  pinMode(GPIO_BTN_FAN_CONTROLLER, INPUT_PULLUP);
+  pinMode(GPIO_LED_FAN_CONTROLLER, OUTPUT);
 
   gpio_set_direction((gpio_num_t)GPIO_PIR, GPIO_MODE_INPUT);
   gpio_set_direction((gpio_num_t)GPIO_LAMP, GPIO_MODE_OUTPUT);
   gpio_set_level((gpio_num_t)GPIO_LAMP, 0);
+
+  ledcAttach(GPIO_FAN_PWM, FAN_PWM_FREQ, FAN_PWM_RESOLUTION);
+  
+  pinMode(GPIO_FAN_TACHIMETRO, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(GPIO_FAN_TACHIMETRO), tachimetro_interrupt, FALLING);
 }
 
 void setup(){
@@ -236,7 +271,7 @@ void setup(){
   Serial.begin(115200);
   Wire.begin(); //I2C
   Wire.setClock(100000);
-
+  
   check_display();
 
   check_bme();
@@ -246,14 +281,16 @@ void setup(){
   bme.setPressureOversampling(BME680_OS_4X);
   bme.setGasHeater(320, 150);
 
+
+
   Serial.println("Inizio Task");
 
   xTaskCreate(task_bme, "BME", 4096, NULL, 2, NULL);
   xTaskCreate(task_display, "Display", 4096, NULL, 1, NULL);
   xTaskCreate(task_pir, "PIR", 4096, NULL, 3, NULL);
   xTaskCreate(task_aspirazione, "Ventola", 4096, NULL, 1, NULL);
-  xTaskCreate(task_btn_speed_auto, "btn_auto", 4096, NULL, 1, NULL);
-  xTaskCreate(task_ventola_manuale, "ventola_manuale", 4096, NULL, 1, NULL);
+  xTaskCreate(task_check_btn_controllo_aspirazione, "btn_auto", 4096, NULL, 1, NULL);
+  xTaskCreate(task_ventola_controller, "ventola_manuale", 4096, NULL, 1, NULL);
 }
 
 void loop(){
