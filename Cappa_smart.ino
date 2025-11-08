@@ -15,7 +15,6 @@
 #define GPIO_FAN_PWM 32
 #define GPIO_FAN_TACHIMETRO 33
 
-#define FAN_PWM_CHANNEL 0
 #define FAN_PWM_FREQ 25000
 #define FAN_PWM_RESOLUTION 8  // 0–255
 
@@ -24,24 +23,25 @@
 #define OLED_RESET -1
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-// BME688 a indirizzo 0x76 (o 0x77 se collegato ADDR a VCC)
 Adafruit_BME680 bme;
+
+// Variabili sensore (scritte da task_bme)
 volatile float temp = 0;
 volatile float hum = 0;
 volatile float gas_index = 0;
+
+// Variabili display
 String msg_mod = "";
-bool lamp_state = false;
-bool mode_manual = false;   // false = automatico
-bool ventola_on = false;
-int speed_ventola = 0;
+
+// Variabili ventola (protette da mutex)
+SemaphoreHandle_t fan_mutex;
+bool mode_manual = false;        // false = automatico, true = manuale
+uint8_t target_fan_speed = 0;    // Velocità target (0-255)
 volatile int tach_pulse_count = 0;
+
 
 void IRAM_ATTR tachimetro_interrupt() {
   tach_pulse_count++;
-}
-
-void set_fan_speed(uint8_t speed) {
-  ledcWrite(GPIO_FAN_PWM, speed);
 }
 
 float read_fan_rpm() {
@@ -53,13 +53,11 @@ float read_fan_rpm() {
     int pulses = tach_pulse_count - last_pulses;
     last_pulses = tach_pulse_count;
     last_time = now;
-    // La maggior parte delle ventole 4 fili genera 2 impulsi per giro
     return (pulses / 2.0f) * 60.0f; // RPM
   }
-  return -1;  // non aggiornato
+  return -1;  // non ancora aggiornato
 }
 
-// Funzione per convertire resistenza gas in Air Quality Index (0-100)
 float gas_to_AirQualityIndex(double gas_ohm) {
   const double GAS_MIN = 10000.0;   // 10 kΩ = aria pessima
   const double GAS_MAX = 120000.0;  // 120 kΩ = aria pulita
@@ -71,7 +69,6 @@ float gas_to_AirQualityIndex(double gas_ohm) {
   return aqi;
 }
 
-// Funzione che converte AQI (%) in messaggio leggibile
 String air_index_to_msg(float quality_index) {
   if      (quality_index < 20)  return "Apri tutto";     // pessima
   else if (quality_index < 40)  return "Aria stantia";   // scarsa
@@ -102,7 +99,6 @@ void check_display(){
   display.setCursor(0, 0);
   display.println("Display OK");
   display.display();
-
   delay(1000);
 }
 
@@ -128,13 +124,12 @@ void check_bme(){
 void task_bme(void *pvParameters){
   for(;;) {
     if (!bme.performReading()) {
-    Serial.println("Lettura fallita!");
-    display.clearDisplay();
-    display.setCursor(0, 0);
-    display.println("Lettura fallita!");
-    display.display();
-    delay(1000);
-    return;
+      Serial.println("Lettura fallita!");
+      display.clearDisplay();
+      display.setCursor(0, 0);
+      display.println("Lettura fallita!");
+      display.display();
+      vTaskDelay(pdMS_TO_TICKS(1000));
     }
     else {
       temp = bme.temperature;
@@ -194,41 +189,70 @@ void task_pir(void *pvParameters) {
   }
 }
 
-void task_aspirazione(void *pvParameters) {
+void task_logica_automatica_ventola(void *pvParameters) {
   unsigned long start_time = millis();
-  bool flag_temp_heater_low = true;
+  bool sensor_warmup_skipped = false;
 
   Serial.println("Ventola SPENTA - attendo riscaldamento sensore...");
 
-  //bme688 danneggiato. Servono 4,5 minuti perché si riscaldi abbastanza da capire che aqi >= 40% 
   for (;;) {
-    if ((millis() - start_time < 270000 || gas_index < 40) && flag_temp_heater_low){
-      flag_temp_heater_low = false;
-      continue;
+    // Skip warmup se il sensore è già caldo (gas_index >= 40 -> ventola spenta)
+    if (!sensor_warmup_skipped) {
+      if (gas_index >= 40) {
+        Serial.println("Sensore già caldo, skip warmup!");
+        sensor_warmup_skipped = true;
+      } else if (millis() - start_time >= 270000) {
+        Serial.println("Warmup completato (4.5 min)");
+        sensor_warmup_skipped = true;
+      } else {
+        // Ancora in warmup
+        vTaskDelay(pdMS_TO_TICKS(2000));
+        continue;
+      }
     }
 
+    // Determina se la ventola deve essere accesa (in modalità automatica)
     bool condizione_accensione = (gas_index < 40 || hum > 75 || temp > 50);
 
-    if (!mode_manual) {
-      ventola_on = condizione_accensione;
-      speed_ventola = ventola_on ? 150 : 0;
+    if (xSemaphoreTake(fan_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+      if (!mode_manual) {
+        // Modalità automatica: imposta velocità fissa 150 se condizioni soddisfatte
+        target_fan_speed = condizione_accensione ? 150 : 0;
+      }
+      xSemaphoreGive(fan_mutex);
     }
-
     vTaskDelay(pdMS_TO_TICKS(2000));
   }
 }
 
-void task_check_btn_controllo_aspirazione(void *pvParameters){
+void task_controllo_manuale_velocita(void *pvParameters) {
+  for (;;) {
+    if (xSemaphoreTake(fan_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+      if (mode_manual) {
+        int pot_value = analogRead(GPIO_POTENZIOMETRO);
+        target_fan_speed = map(pot_value, 0, 4095, 0, 255);
+      }
+      xSemaphoreGive(fan_mutex);
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(100));
+  }
+}
+
+void task_toggle_mode(void *pvParameters){
   int button_last_state = HIGH;
 
   for (;;) {
     int button_state = digitalRead(GPIO_BTN_FAN_CONTROLLER);
 
     if (button_state == LOW && button_last_state == HIGH) {
-      mode_manual = !mode_manual;
-      digitalWrite(GPIO_LED_FAN_CONTROLLER, mode_manual ? HIGH : LOW);
-      Serial.printf("Modalità: %s\n", mode_manual ? "MANUALE" : "AUTOMATICA");
-      vTaskDelay(pdMS_TO_TICKS(200)); 
+      if (xSemaphoreTake(fan_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+        mode_manual = !mode_manual;
+        digitalWrite(GPIO_LED_FAN_CONTROLLER, mode_manual ? HIGH : LOW);
+        Serial.printf("Modalità: %s\n", mode_manual ? "MANUALE" : "AUTOMATICA");
+        xSemaphoreGive(fan_mutex);
+      }
+      vTaskDelay(pdMS_TO_TICKS(200)); // debounce
     }
 
     button_last_state = button_state;
@@ -236,20 +260,21 @@ void task_check_btn_controllo_aspirazione(void *pvParameters){
   }
 }
 
-void task_ventola_controller(void *pvParameters) {
+void task_attuatore_ventola(void *pvParameters) {
   for (;;) {
-    if (mode_manual) {
-      int pot_value = analogRead(GPIO_POTENZIOMETRO);
-      speed_ventola = map(pot_value, 0, 4095, 0, 255);
-      ventola_on = speed_ventola > 10;
+    uint8_t speed_to_set = 0;
+
+    if (xSemaphoreTake(fan_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+      speed_to_set = target_fan_speed;
+      xSemaphoreGive(fan_mutex);
+      Serial.printf("Fan speed: %d PWM, %.0f RPM\n", speed_to_set, read_fan_rpm());
     }
 
-    set_fan_speed(ventola_on ? speed_ventola : 0);
+    ledcWrite(GPIO_FAN_PWM, speed_to_set);
 
     vTaskDelay(pdMS_TO_TICKS(1000));
   }
 }
-
 
 void setup_GPIO(){
   pinMode(GPIO_POTENZIOMETRO, INPUT);
@@ -269,11 +294,12 @@ void setup_GPIO(){
 void setup(){
   setup_GPIO();
   Serial.begin(115200);
-  Wire.begin(); //I2C
+  Wire.begin();
   Wire.setClock(100000);
+
+  fan_mutex = xSemaphoreCreateMutex();
   
   check_display();
-
   check_bme();
 
   bme.setTemperatureOversampling(BME680_OS_8X);
@@ -281,17 +307,20 @@ void setup(){
   bme.setPressureOversampling(BME680_OS_4X);
   bme.setGasHeater(320, 150);
 
-
-
   Serial.println("Inizio Task");
 
-  xTaskCreate(task_bme, "BME", 4096, NULL, 2, NULL);
+  // Task sensori e display
+  xTaskCreate(task_bme, "BME688", 4096, NULL, 2, NULL);
   xTaskCreate(task_display, "Display", 4096, NULL, 1, NULL);
   xTaskCreate(task_pir, "PIR", 4096, NULL, 3, NULL);
-  xTaskCreate(task_aspirazione, "Ventola", 4096, NULL, 1, NULL);
-  xTaskCreate(task_check_btn_controllo_aspirazione, "btn_auto", 4096, NULL, 1, NULL);
-  xTaskCreate(task_ventola_controller, "ventola_manuale", 4096, NULL, 1, NULL);
+  
+  // Task ventola: separazione responsabilità
+  xTaskCreate(task_logica_automatica_ventola, "LogicaAuto", 4096, NULL, 1, NULL);
+  xTaskCreate(task_controllo_manuale_velocita, "PotenzioMetro", 4096, NULL, 1, NULL);
+  xTaskCreate(task_toggle_mode, "ToggleMode", 4096, NULL, 1, NULL);
+  xTaskCreate(task_attuatore_ventola, "AttuatoreVentola", 4096, NULL, 2, NULL);
 }
 
 void loop(){
+  // Vuoto: tutto gestito da FreeRTOS
 }
