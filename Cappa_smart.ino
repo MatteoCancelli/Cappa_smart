@@ -1,3 +1,4 @@
+#include "include/Globals.h"
 #include <Arduino.h>
 #include "esp32-hal-ledc.h"
 #include <Wire.h>
@@ -10,17 +11,18 @@
 #include "freertos/task.h"
 #include "config.h"
 
-// SDA = 21, SCL = 22
-#define GPIO_PIR 23
-#define GPIO_LAMP 5
-#define GPIO_POTENZIOMETRO 15
-#define GPIO_BTN_FAN_CONTROLLER 18
-#define GPIO_LED_FAN_CONTROLLER 19
-#define GPIO_FAN_PWM 32
-#define GPIO_FAN_TACHIMETRO 33
 
-#define FAN_PWM_FREQ 25000
-#define FAN_PWM_RESOLUTION 8  // 0–255
+// // SDA = 21, SCL = 22
+// #define GPIO_PIR 23
+// #define GPIO_LAMP 5
+// #define GPIO_POTENZIOMETRO 15
+// #define GPIO_BTN_FAN_CONTROLLER 18
+// #define GPIO_LED_FAN_CONTROLLER 19
+// #define GPIO_FAN_PWM 32
+// #define GPIO_FAN_TACHIMETRO 33
+
+// #define FAN_PWM_FREQ 25000
+// #define FAN_PWM_RESOLUTION 8  // 0–255
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
@@ -43,17 +45,17 @@ PubSubClient mqttClient(espClient);
 
 Adafruit_BME680 bme;
 
-// Variabili sensore (scritte da task_bme)
-volatile float temp = 0;
-volatile float hum = 0;
-volatile float gas_index = 0;
+// // Variabili sensore (scritte da task_bme)
+// volatile float temp = 0;
+// volatile float hum = 0;
+// volatile float gas_index = 0;
 
 // Variabili display
 String msg_mod = "";
 
 // Variabili ventola (protette da mutex)
 SemaphoreHandle_t fan_mutex;
-bool mode_manual = false;        // false = automatico, true = manuale
+//bool mode_manual = false;        // false = automatico, true = manuale
 uint8_t target_fan_speed = 0;    // Velocità target (0-255)
 volatile int tach_pulse_count = 0;
 
@@ -409,20 +411,20 @@ void task_attuatore_ventola(void *pvParameters) {
   }
 }
 
-void setup_GPIO(){
-  pinMode(GPIO_POTENZIOMETRO, INPUT);
-  pinMode(GPIO_BTN_FAN_CONTROLLER, INPUT_PULLUP);
-  pinMode(GPIO_LED_FAN_CONTROLLER, OUTPUT);
+// void setup_GPIO(){
+//   pinMode(GPIO_POTENZIOMETRO, INPUT);
+//   pinMode(GPIO_BTN_FAN_CONTROLLER, INPUT_PULLUP);
+//   pinMode(GPIO_LED_FAN_CONTROLLER, OUTPUT);
 
-  gpio_set_direction((gpio_num_t)GPIO_PIR, GPIO_MODE_INPUT);
-  gpio_set_direction((gpio_num_t)GPIO_LAMP, GPIO_MODE_OUTPUT);
-  gpio_set_level((gpio_num_t)GPIO_LAMP, 0);
+//   gpio_set_direction((gpio_num_t)GPIO_PIR, GPIO_MODE_INPUT);
+//   gpio_set_direction((gpio_num_t)GPIO_LAMP, GPIO_MODE_OUTPUT);
+//   gpio_set_level((gpio_num_t)GPIO_LAMP, 0);
 
-  ledcAttach(GPIO_FAN_PWM, FAN_PWM_FREQ, FAN_PWM_RESOLUTION);
+//   ledcAttach(GPIO_FAN_PWM, FAN_PWM_FREQ, FAN_PWM_RESOLUTION);
   
-  pinMode(GPIO_FAN_TACHIMETRO, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(GPIO_FAN_TACHIMETRO), tachimetro_interrupt, FALLING);
-}
+//   pinMode(GPIO_FAN_TACHIMETRO, INPUT_PULLUP);
+//   attachInterrupt(digitalPinToInterrupt(GPIO_FAN_TACHIMETRO), tachimetro_interrupt, FALLING);
+// }
 
 void setup(){
   setup_GPIO();
