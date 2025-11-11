@@ -11,3 +11,4 @@
 # Librerie di terzi
 /libraries/*
 
+config.h
