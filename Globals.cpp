@@ -11,7 +11,7 @@
 #include "freertos/task.h"
 #include "config.h"
 
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+// Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 SemaphoreHandle_t fan_mutex;
 WiFiClient espClient;
@@ -20,7 +20,7 @@ PubSubClient mqttClient(espClient);
 bool mode_manual = false;
 bool ventola_on = false;
 int speed_ventola = 0;
-String msg_mod = "";
+// String msg_mod = "";
 uint8_t target_fan_speed = 0;    // Velocità target (0-255)
 volatile int tach_pulse_count = 0;
 

@@ -26,11 +26,11 @@
 #define FAN_PWM_FREQ 25000
 #define FAN_PWM_RESOLUTION 8
 
-// --- Display ---
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-#define OLED_RESET -1
-extern Adafruit_SSD1306 display;
+// // --- Display ---
+// #define SCREEN_WIDTH 128
+// #define SCREEN_HEIGHT 64
+// #define OLED_RESET -1
+// extern Adafruit_SSD1306 display;
 
 // --- BME680 ---
 extern Adafruit_BME680 bme;
@@ -40,7 +40,7 @@ extern SemaphoreHandle_t fan_mutex;
 extern bool mode_manual;
 extern bool ventola_on;
 extern int speed_ventola;
-extern String msg_mod;
+// extern String msg_mod;
 extern uint8_t target_fan_speed;    // Velocità target (0-255)
 extern volatile int tach_pulse_count;
 

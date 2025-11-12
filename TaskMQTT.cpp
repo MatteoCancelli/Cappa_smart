@@ -1,5 +1,6 @@
 #include "include/Globals.h"
 #include "include/TaskMQTT.h"
+#include "include/Display.h"
 
 
 void setup_wifi() {
@@ -9,10 +10,11 @@ void setup_wifi() {
   Serial.println(WIFI_SSID);
 
   // Mostra su display
-  display.clearDisplay();
-  display.setCursor(0, 0);
-  display.println("Connessione WiFi...");
-  display.display();
+  // display.clearDisplay();
+  // display.setCursor(0, 0);
+  // display.println("Connessione WiFi...");
+  // display.display();
+  wifi_try_msg();
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -29,24 +31,13 @@ void setup_wifi() {
     Serial.println("WiFi connesso!");
     Serial.print("IP: ");
     Serial.println(WiFi.localIP());
-
-    display.clearDisplay();
-    display.setCursor(0, 0);
-    display.println("WiFi OK!");
-    display.setCursor(0, 16);
-    display.print("IP: ");
-    display.println(WiFi.localIP());
-    display.display();
+    wifi_ok_msg(WiFi.localIP());
     delay(2000);
+
   } else {
     Serial.println();
     Serial.println("ERRORE: WiFi non connesso!");
-    display.clearDisplay();
-    display.setCursor(0, 0);
-    display.println("WiFi ERRORE!");
-    display.setCursor(0, 16);
-    display.println("Controllo cred.");
-    display.display();
+    wifi_error_msg();
     delay(3000);
   }
 }

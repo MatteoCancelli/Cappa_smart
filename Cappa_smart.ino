@@ -1,47 +1,25 @@
 #include "include/Globals.h"
 #include "include/TaskMQTT.h"
-
-void visualizza_msg_scorrevole(String msg){
-  if (msg.length() >= 10){
-    display.print(msg_mod);
-    msg_mod.remove(0,1);
-  }
-  else{
-    display.print(msg);
-  }
-}
-
-void check_display(){
-  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.println("Errore display");
-    while (true);
-  }
-
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, 0);
-  display.println("Display OK");
-  display.display();
-  delay(1000);
-}
+#include "include/Display.h"
 
 void check_bme(){
   if (!bme.begin(0x76)) {
     Serial.println("Errore: BME688 non trovato!");
-    display.clearDisplay();
-    display.setCursor(0, 0);
-    display.println("ERRORE BME688");
-    display.setCursor(0, 16);
-    display.println("Controlla I2C!");
-    display.display();
+    // display.clearDisplay();
+    // display.setCursor(0, 0);
+    // display.println("ERRORE BME688");
+    // display.setCursor(0, 16);
+    // display.println("Controlla I2C!");
+    // display.display();
+    bme_error_msg();
     while (true);
   }
   Serial.println("BME688 trovato!");
-  display.clearDisplay();
-  display.setCursor(0, 0);
-  display.println("BME688 OK");
-  display.display();
+  // display.clearDisplay();
+  // display.setCursor(0, 0);
+  // display.println("BME688 OK");
+  // display.display();
+  bme_ok_msg();
   delay(1000);
 }
 
@@ -61,30 +39,6 @@ void task_bme(void *pvParameters){
       gas_index = gas_to_AirQualityIndex(bme.gas_resistance);
     }
     vTaskDelay(pdMS_TO_TICKS(2000)); 
-  }
-}
-
-void task_display(void *pvParameters){
-  for(;;) {
-    display.clearDisplay();
-    display.setCursor(0, 0);
-    display.setTextSize(1);
-    display.print("Temperatura:  "); display.print(temp, 1); display.println(" C");
-    display.setCursor(0, 12);
-    display.print("Umidita:      "); display.print(hum, 1); display.println(" %");
-    display.setCursor(0, 24);
-    display.print("Qualita aria: "); display.print(gas_index, 1); display.println(" %");
-    display.setCursor(0, 48);
-    display.setTextSize(2);
-
-    String msg = air_index_to_msg(gas_index);
-    if (msg_mod.length() < 10)
-      msg_mod = msg;  
-
-    visualizza_msg_scorrevole(msg);
-    display.display();
-
-    vTaskDelay(pdMS_TO_TICKS(500)); 
   }
 }
 
@@ -200,20 +154,6 @@ void task_attuatore_ventola(void *pvParameters) {
   }
 }
 
-// void setup_GPIO(){
-//   pinMode(GPIO_POTENZIOMETRO, INPUT);
-//   pinMode(GPIO_BTN_FAN_CONTROLLER, INPUT_PULLUP);
-//   pinMode(GPIO_LED_FAN_CONTROLLER, OUTPUT);
-
-//   gpio_set_direction((gpio_num_t)GPIO_PIR, GPIO_MODE_INPUT);
-//   gpio_set_direction((gpio_num_t)GPIO_LAMP, GPIO_MODE_OUTPUT);
-//   gpio_set_level((gpio_num_t)GPIO_LAMP, 0);
-
-//   ledcAttach(GPIO_FAN_PWM, FAN_PWM_FREQ, FAN_PWM_RESOLUTION);
-  
-//   pinMode(GPIO_FAN_TACHIMETRO, INPUT_PULLUP);
-//   attachInterrupt(digitalPinToInterrupt(GPIO_FAN_TACHIMETRO), tachimetro_interrupt, FALLING);
-// }
 
 void setup(){
   setup_GPIO();
