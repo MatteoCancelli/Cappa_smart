@@ -44,14 +44,14 @@ extern int speed_ventola;
 extern uint8_t target_fan_speed;    // Velocità target (0-255)
 extern volatile int tach_pulse_count;
 
-// --- Sensori ambiente ---
-extern float temp;
-extern float hum;
-extern float gas_index;
+// // --- Sensori ambiente ---
+// extern float temp;
+// extern float hum;
+// extern float gas_index;
 
 // --- Funzioni comuni ---
 void setup_GPIO();
 void IRAM_ATTR tachimetro_interrupt();
 float read_fan_rpm();
-float gas_to_AirQualityIndex(double gas_ohm);
-String air_index_to_msg(float quality_index); 
+// float gas_to_AirQualityIndex(double gas_ohm);
+// String air_index_to_msg(float quality_index); 

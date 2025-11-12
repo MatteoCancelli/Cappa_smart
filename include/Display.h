@@ -1,6 +1,7 @@
 #pragma once
 #include "include/Globals.h"
 #include "include/Display.h"
+#include "include/BME680.h"
 #include <Adafruit_SSD1306.h>
 
 #define SCREEN_WIDTH 128
@@ -15,5 +16,6 @@ void wifi_ok_msg(IPAddress local_IP);
 void wifi_error_msg();
 void bme_error_msg();
 void bme_ok_msg();
+void bme_fail_msg();
 void check_display();
 void task_display(void *pvParameters);

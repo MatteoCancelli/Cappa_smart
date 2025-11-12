@@ -1,46 +1,47 @@
 #include "include/Globals.h"
 #include "include/TaskMQTT.h"
 #include "include/Display.h"
+#include "include/BME680.h"
 
-void check_bme(){
-  if (!bme.begin(0x76)) {
-    Serial.println("Errore: BME688 non trovato!");
-    // display.clearDisplay();
-    // display.setCursor(0, 0);
-    // display.println("ERRORE BME688");
-    // display.setCursor(0, 16);
-    // display.println("Controlla I2C!");
-    // display.display();
-    bme_error_msg();
-    while (true);
-  }
-  Serial.println("BME688 trovato!");
-  // display.clearDisplay();
-  // display.setCursor(0, 0);
-  // display.println("BME688 OK");
-  // display.display();
-  bme_ok_msg();
-  delay(1000);
-}
+// void check_bme(){
+//   if (!bme.begin(0x76)) {
+//     Serial.println("Errore: BME688 non trovato!");
+//     // display.clearDisplay();
+//     // display.setCursor(0, 0);
+//     // display.println("ERRORE BME688");
+//     // display.setCursor(0, 16);
+//     // display.println("Controlla I2C!");
+//     // display.display();
+//     bme_error_msg();
+//     while (true);
+//   }
+//   Serial.println("BME688 trovato!");
+//   // display.clearDisplay();
+//   // display.setCursor(0, 0);
+//   // display.println("BME688 OK");
+//   // display.display();
+//   bme_ok_msg();
+//   delay(1000);
+// }
 
-void task_bme(void *pvParameters){
-  for(;;) {
-    if (!bme.performReading()) {
-      Serial.println("Lettura fallita!");
-      display.clearDisplay();
-      display.setCursor(0, 0);
-      display.println("Lettura fallita!");
-      display.display();
-      vTaskDelay(pdMS_TO_TICKS(1000));
-    }
-    else {
-      temp = bme.temperature;
-      hum  = bme.humidity;
-      gas_index = gas_to_AirQualityIndex(bme.gas_resistance);
-    }
-    vTaskDelay(pdMS_TO_TICKS(2000)); 
-  }
-}
+// void task_bme(void *pvParameters){
+//   for(;;) {
+//     if (!bme.performReading()) {
+//       Serial.println("Lettura fallita!");
+//       display.clearDisplay();
+//       display.setCursor(0, 0);
+//       display.println("Lettura fallita!");
+//       display.display();
+//       vTaskDelay(pdMS_TO_TICKS(1000));
+//     }
+//     else {
+//       temp = bme.temperature;
+//       hum  = bme.humidity;
+//       gas_index = gas_to_AirQualityIndex(bme.gas_resistance);
+//     }
+//     vTaskDelay(pdMS_TO_TICKS(2000)); 
+//   }
+// }
 
 void task_pir(void *pvParameters) {
   TickType_t last_motion_time = 0;

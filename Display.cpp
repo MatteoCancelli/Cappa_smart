@@ -1,5 +1,6 @@
 #include "include/Globals.h"
 #include "include/Display.h"
+#include "include/BME680.h"
 #include <Adafruit_SSD1306.h>
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -44,6 +45,13 @@ void bme_ok_msg(){
   display.clearDisplay();
   display.setCursor(0, 0);
   display.println("BME688 OK");
+  display.display();
+}
+
+void bme_fail_msg(){
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.println("Lettura fallita!");
   display.display();
 }
 

@@ -2,8 +2,8 @@
 #include "include/Globals.h"
 #include "esp32-hal-ledc.h"
 #include <Wire.h>
-#include <Adafruit_SSD1306.h>
-#include <Adafruit_BME680.h>
+//#include <Adafruit_SSD1306.h>
+//#include <Adafruit_BME680.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
@@ -24,10 +24,10 @@ int speed_ventola = 0;
 uint8_t target_fan_speed = 0;    // Velocità target (0-255)
 volatile int tach_pulse_count = 0;
 
-Adafruit_BME680 bme;
-float temp = 0;
-float hum = 0;
-float gas_index = 0;
+// Adafruit_BME680 bme;
+// float temp = 0;
+// float hum = 0;
+// float gas_index = 0;
 
 void setup_GPIO() {
   pinMode(GPIO_POTENZIOMETRO, INPUT);
@@ -60,21 +60,21 @@ float read_fan_rpm() {
   return -1;  // non ancora aggiornato
 }
 
-float gas_to_AirQualityIndex(double gas_ohm) {
-  const double GAS_MIN = 10000.0;   // 10 kΩ = aria pessima
-  const double GAS_MAX = 120000.0;  // 120 kΩ = aria pulita
+// float gas_to_AirQualityIndex(double gas_ohm) {
+//   const double GAS_MIN = 10000.0;   // 10 kΩ = aria pessima
+//   const double GAS_MAX = 120000.0;  // 120 kΩ = aria pulita
 
-  if (gas_ohm < GAS_MIN) gas_ohm = GAS_MIN;
-  if (gas_ohm > GAS_MAX) gas_ohm = GAS_MAX;
+//   if (gas_ohm < GAS_MIN) gas_ohm = GAS_MIN;
+//   if (gas_ohm > GAS_MAX) gas_ohm = GAS_MAX;
 
-  float aqi = (gas_ohm - GAS_MIN) / (GAS_MAX - GAS_MIN) * 100;
-  return aqi;
-}
+//   float aqi = (gas_ohm - GAS_MIN) / (GAS_MAX - GAS_MIN) * 100;
+//   return aqi;
+// }
 
-String air_index_to_msg(float quality_index) {
-  if      (quality_index < 20)  return "Apri tutto";     // pessima
-  else if (quality_index < 40)  return "Aria stantia";   // scarsa
-  else if (quality_index < 60)  return "Aria viziata";   // media
-  else if (quality_index < 80)  return "Aria normale";   // buona
-  else                          return "Aria fresca";    // ottima
-}
+// String air_index_to_msg(float quality_index) {
+//   if      (quality_index < 20)  return "Apri tutto";     // pessima
+//   else if (quality_index < 40)  return "Aria stantia";   // scarsa
+//   else if (quality_index < 60)  return "Aria viziata";   // media
+//   else if (quality_index < 80)  return "Aria normale";   // buona
+//   else                          return "Aria fresca";    // ottima
+// }
