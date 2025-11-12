@@ -1,5 +1,9 @@
 #pragma once
+#include <WiFi.h>
+#include <PubSubClient.h>
+#include <ArduinoJson.h>
 #include "include/Globals.h"
+#include "config.h"
 
 // Topic MQTT
 #define TOPIC_TEMP "home/bme688/temperature"

@@ -1,6 +1,8 @@
+#include <WiFi.h>
+#include <PubSubClient.h>
+#include <ArduinoJson.h>
+#include "config.h"
 #include "include/Globals.h"
-#include "include/TaskMQTT.h"
-#include "include/Display.h"
 
 
 void setup_wifi() {
@@ -8,12 +10,6 @@ void setup_wifi() {
   Serial.println();
   Serial.print("Connessione a ");
   Serial.println(WIFI_SSID);
-
-  // Mostra su display
-  // display.clearDisplay();
-  // display.setCursor(0, 0);
-  // display.println("Connessione WiFi...");
-  // display.display();
   wifi_try_msg();
 
   WiFi.mode(WIFI_STA);
@@ -98,7 +94,7 @@ void task_mqtt_publish(void *pvParameters) {
         dtostrf(rpm, 6, 0, buffer);
         mqttClient.publish(TOPIC_FAN_RPM, buffer);
       }
-      //mqttClient.publish(TOPIC_PIR, motion_detected ? "detected" : "clear");
+      mqttClient.publish(TOPIC_PIR, motion_detected ? "detected" : "clear");
 
       Serial.println("Dati MQTT pubblicati");
     }

@@ -1,12 +1,6 @@
 #include "include/Globals.h"
-#include "include/BME680.h"
-#include "include/Display.h"
 #include <Adafruit_BME680.h>
 
-Adafruit_BME680 bme;
-float temp = 0;
-float hum = 0;
-float gas_index = 0;
 
 void check_bme(){
   if (!bme.begin(0x76)) {

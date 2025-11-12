@@ -1,10 +1,6 @@
 #include "include/Globals.h"
-#include "include/Display.h"
-#include "include/BME680.h"
 #include <Adafruit_SSD1306.h>
 
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-String msg_mod = "";
 
 void wifi_try_msg(){
   display.clearDisplay();
