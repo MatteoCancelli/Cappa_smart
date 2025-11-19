@@ -30,16 +30,10 @@ float gas_index = 0;
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
 
-#define GPIO_PIR 23
-#define GPIO_LAMP 5
-#define GPIO_POTENZIOMETRO 15
-#define GPIO_BTN_FAN_CONTROLLER 18
-#define GPIO_LED_FAN_CONTROLLER 19
-#define GPIO_FAN_PWM 32
-#define GPIO_FAN_TACHIMETRO 33
-// SDA = 21, SCL = 22
-
 void setup_GPIO() {
+
+  analogSetPinAttenuation(GPIO_POTENZIOMETRO, ADC_11db);
+
   pinMode(GPIO_POTENZIOMETRO, INPUT);
   pinMode(GPIO_BTN_FAN_CONTROLLER, INPUT_PULLUP);
   pinMode(GPIO_LED_FAN_CONTROLLER, OUTPUT);

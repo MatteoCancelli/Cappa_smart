@@ -61,6 +61,7 @@ void task_controllo_manuale_velocita(void *pvParameters) {
       if (mode_manual) {
         int pot_value = analogRead(GPIO_POTENZIOMETRO);
         target_fan_speed = map(pot_value, 0, 4095, 0, 255);
+        //Serial.printf("Potenziometro: %d \n Target Fan speed: %d \n", pot_value, target_fan_speed);
       }
       xSemaphoreGive(fan_mutex);
     }

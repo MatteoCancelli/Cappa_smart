@@ -70,9 +70,8 @@ void task_mqtt_publish(void *pvParameters) {
     // Loop MQTT per gestire messaggi
     mqttClient.loop();
 
-    // Pubblica dati se connesso
     if (mqttClient.connected()) {
-      char buffer[32];
+      char buffer[64];
       dtostrf(temp, 5, 2, buffer);
       mqttClient.publish(TOPIC_TEMP, buffer);
       dtostrf(hum, 5, 2, buffer);
@@ -96,7 +95,7 @@ void task_mqtt_publish(void *pvParameters) {
       }
       mqttClient.publish(TOPIC_PIR, motion_detected ? "detected" : "clear");
 
-      Serial.println("Dati MQTT pubblicati");
+      //Serial.println("Dati MQTT pubblicati");
     }
 
     vTaskDelayUntil(&last_wake_time, frequency);
