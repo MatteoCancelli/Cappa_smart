@@ -17,8 +17,6 @@ String msg_mod = "";
 
 SemaphoreHandle_t fan_mutex;
 bool mode_manual = false;
-bool ventola_on = false;
-int speed_ventola = 0;
 uint8_t target_fan_speed = 0;    // Velocità target (0-255)
 volatile int tach_pulse_count = 0;
 bool motion_detected = false;

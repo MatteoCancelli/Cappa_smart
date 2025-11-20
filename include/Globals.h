@@ -32,8 +32,6 @@ extern Adafruit_BME680 bme;
 extern String msg_mod;
 extern SemaphoreHandle_t fan_mutex;
 extern bool mode_manual;
-extern bool ventola_on;
-extern int speed_ventola;
 extern uint8_t target_fan_speed;    
 extern volatile int tach_pulse_count;
 extern bool motion_detected;
