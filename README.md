@@ -31,7 +31,8 @@ Progetto per ESP32 che legge un sensore BME688, gestisce una ventola (modalità 
 | Breadboard + jumper | - | - |
 | Modulo alimentazione breadboard | Output 3.3 V e 5 V | - | 
 | Potenziometro | B10K | GPIO36 (ADC1 perché ADC2 condiviso con WiFi)|
-| LED + Resistenza | LED + 1 kΩ | GPIO5 |
+| Bottone | - | GPIO18 |
+| LED + Resistenza | LED + 1 kΩ | GPIO19 |
 | Condensatore | 2200 µF, 25 V (per stabilizzare alimentazione ventola e ridurre reset ESP) | 5 V |
 
 **Note sul codice e best practice**
