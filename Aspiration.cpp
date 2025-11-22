@@ -1,108 +1,156 @@
+#include <Arduino.h>
 #include "include/Globals.h"
+#include "esp32-hal-ledc.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/semphr.h"
 
+#ifndef WARMUP_MS
+#define WARMUP_MS (270000UL) // 4.5 minuti
+#endif
 
-void IRAM_ATTR tachimetro_interrupt() {
+// --- Helper: ensure mutex exists (call before using) ---
+static void ensure_fan_mutex()
+{
+  if (fan_mutex == NULL)
+  {
+    fan_mutex = xSemaphoreCreateMutex();
+    // optional: check null and print if failed
+    if (fan_mutex == NULL)
+    {
+      Serial.println("ERROR: failed to create fan_mutex");
+    }
+  }
+}
+
+void IRAM_ATTR tachimetro_interrupt()
+{
   tach_pulse_count++;
 }
 
-float read_fan_rpm() {
+float read_fan_rpm()
+{
   static unsigned long last_time = 0;
   static int last_pulses = 0;
 
   unsigned long now = millis();
-  if (now - last_time >= 1000) {  
+  if (now - last_time >= 1000)
+  {
     int pulses = tach_pulse_count - last_pulses;
     last_pulses = tach_pulse_count;
     last_time = now;
-    return (pulses / 2.0f) * 60.0f; // RPM
+    const float impulses_per_rev = 2.0f;
+    float rpm = (pulses / impulses_per_rev) * 60.0f;
+    return rpm;
   }
-  return -1;  // non ancora aggiornato
+  return -1.0f; // no update yet
 }
 
-void task_logica_automatica_ventola(void *pvParameters) {
+void attuatore_ventola(int speed_wanted)
+{
+  ensure_fan_mutex();
+  if (xSemaphoreTake(fan_mutex, pdMS_TO_TICKS(50)) == pdTRUE)
+  {
+    if (target_fan_speed != speed_wanted)
+    {
+      ledcWrite(GPIO_FAN_PWM, speed_wanted);
+      target_fan_speed = speed_wanted;
+      //Serial.printf("Velocita ventola impostata a %d\n", speed_wanted);
+    }
+    xSemaphoreGive(fan_mutex);
+  }
+}
+
+void task_toggle_mode(void *pvParameters)
+{
+  int last_state = digitalRead(GPIO_BTN_FAN_CONTROLLER);
+  unsigned long last_debounce = 0;
+  const unsigned long debounce_ms = 50;
+  for (;;)
+  {
+    int st = digitalRead(GPIO_BTN_FAN_CONTROLLER);
+    if (st != last_state)
+    {
+      last_debounce = millis();
+    }
+    if ((millis() - last_debounce) > debounce_ms)
+    {
+      static int stable_state = HIGH;
+      if (st != stable_state)
+      {
+        if (stable_state == HIGH && st == LOW)
+        {
+          mode_manual = !mode_manual;
+          digitalWrite(GPIO_LED_FAN_CONTROLLER, mode_manual ? HIGH : LOW);
+          Serial.printf("Modalità: %s\n", mode_manual ? "MANUALE" : "AUTOMATICA");
+        }
+        stable_state = st;
+      }
+    }
+    last_state = st;
+    vTaskDelay(pdMS_TO_TICKS(20));
+  }
+}
+
+static void controllo_manuale_velocita()
+{
+  int pot = analogRead(GPIO_POTENZIOMETRO);
+  int speed_wanted = map(pot, 0, 4095, 0, 255);
+  attuatore_ventola(speed_wanted);
+}
+
+static bool warmup_delay(unsigned long start_time)
+{
+  if (gas_index >= 40.0f)
+  {
+    return true;
+  }
+  if (millis() - start_time >= WARMUP_MS)
+  {
+    Serial.println("Warmup completato");
+    return true;
+  }
+  return false;
+}
+
+void task_logica_ventola(void *pvParameters)
+{
+  ensure_fan_mutex();
   unsigned long start_time = millis();
-  bool sensor_warmup_skipped = false;
+  bool warmup_done = false;
+  Serial.println("Warmup bme in corso...");
 
-  Serial.println("Ventola SPENTA - attendo riscaldamento sensore...");
+  const TickType_t loop_delay_normal = pdMS_TO_TICKS(200);
 
-  for (;;) {
-    // Skip warmup se il sensore è già caldo (gas_index >= 40 -> ventola spenta)
-    if (!sensor_warmup_skipped) {
-      if (gas_index >= 40) {
-        Serial.println("Sensore già caldo, skip warmup!");
-        sensor_warmup_skipped = true;
-      } else if (millis() - start_time >= 270000) {
-        Serial.println("Warmup completato (4.5 min)");
-        sensor_warmup_skipped = true;
-      } else {
-        // Ancora in warmup
-        vTaskDelay(pdMS_TO_TICKS(2000));
-        continue;
-      }
+  for (;;)
+  {
+    // --- MANUALE SEMPRE DISPONIBILE ---
+    if (mode_manual)
+    {
+      controllo_manuale_velocita();
+      vTaskDelay(loop_delay_normal);
+      continue;
     }
 
-    // Determina se la ventola deve essere accesa (in modalità automatica)
-    bool condizione_accensione = (gas_index < 40 || hum > 75 || temp > 50);
-
-    if (xSemaphoreTake(fan_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-      if (!mode_manual) {
-        // Modalità automatica: imposta velocità fissa 150 se condizioni soddisfatte
-        target_fan_speed = condizione_accensione ? 150 : 0;
-      }
-      xSemaphoreGive(fan_mutex);
+    // --- AUTOMATICO: warmup obbligatorio ---
+    if (!warmup_delay(start_time) && !warmup_done)
+    {
+      attuatore_ventola(0);
+      vTaskDelay(loop_delay_normal);
+      continue;
     }
-    vTaskDelay(pdMS_TO_TICKS(2000));
+    else
+    {
+      warmup_done = true;
+    }
+
+    // --- LOGICA AUTOMATICA ---
+    bool condizione_accensione = (gas_index < 40.0f || hum > 75.0f || temp > 50.0f);
+    int speed_wanted = condizione_accensione ? 150 : 0;
+
+    attuatore_ventola(speed_wanted);
+
+    vTaskDelay(loop_delay_normal);
   }
 }
 
-void task_controllo_manuale_velocita(void *pvParameters) {
-  for (;;) {
-    if (xSemaphoreTake(fan_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-      if (mode_manual) {
-        int pot_value = analogRead(GPIO_POTENZIOMETRO);
-        target_fan_speed = map(pot_value, 0, 4095, 0, 255);
-        //Serial.printf("Potenziometro: %d \n Target Fan speed: %d \n", pot_value, target_fan_speed);
-      }
-      xSemaphoreGive(fan_mutex);
-    }
-
-    vTaskDelay(pdMS_TO_TICKS(100));
-  }
-}
-
-void task_toggle_mode(void *pvParameters){
-  int button_last_state = HIGH;
-
-  for (;;) {
-    int button_state = digitalRead(GPIO_BTN_FAN_CONTROLLER);
-
-    if (button_state == LOW && button_last_state == HIGH) {
-      if (xSemaphoreTake(fan_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-        mode_manual = !mode_manual;
-        digitalWrite(GPIO_LED_FAN_CONTROLLER, mode_manual ? HIGH : LOW);
-        Serial.printf("Modalità: %s\n", mode_manual ? "MANUALE" : "AUTOMATICA");
-        xSemaphoreGive(fan_mutex);
-      }
-      vTaskDelay(pdMS_TO_TICKS(200)); // debounce
-    }
-
-    button_last_state = button_state;
-    vTaskDelay(pdMS_TO_TICKS(50)); 
-  }
-}
-
-void task_attuatore_ventola(void *pvParameters) {
-  for (;;) {
-    uint8_t speed_to_set = 0;
-
-    if (xSemaphoreTake(fan_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-      speed_to_set = target_fan_speed;
-      xSemaphoreGive(fan_mutex);
-      Serial.printf("Fan speed: %d PWM, %.0f RPM\n", speed_to_set, read_fan_rpm());
-    }
-
-    ledcWrite(GPIO_FAN_PWM, speed_to_set);
-
-    vTaskDelay(pdMS_TO_TICKS(1000));
-  }
-}
