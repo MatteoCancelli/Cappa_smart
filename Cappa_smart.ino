@@ -28,11 +28,9 @@ void setup(){
   xTaskCreate(task_display, "Display", 4096, NULL, 1, NULL);
   xTaskCreate(task_pir, "PIR", 4096, NULL, 3, NULL);
   
-  // Task ventola: separazione responsabilità
+  // Task ventola e bottone
   xTaskCreate(task_logica_ventola, "LogicaVentola", 4096, NULL, 2, NULL);
-  // xTaskCreate(task_controllo_manuale_velocita, "PotenzioMetro", 4096, NULL, 1, NULL);
   xTaskCreate(task_toggle_mode, "ToggleMode", 4096, NULL, 3, NULL);
-  // xTaskCreate(task_attuatore_ventola, "AttuatoreVentola", 4096, NULL, 2, NULL);
 
   xTaskCreate(task_mqtt_publish, "MQTT_Publish", 4096, NULL, 2, NULL);
 }

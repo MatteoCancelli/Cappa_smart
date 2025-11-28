@@ -17,7 +17,6 @@
 #define GPIO_BTN_FAN_CONTROLLER 18
 #define GPIO_LED_FAN_CONTROLLER 19
 #define GPIO_FAN_PWM 32
-#define GPIO_FAN_TACHIMETRO 33
 // SDA = 21, SCL = 22
 
 #define FAN_PWM_CHANNEL 0
@@ -33,7 +32,6 @@ extern String msg_mod;
 extern SemaphoreHandle_t fan_mutex;
 extern bool mode_manual;
 extern uint8_t target_fan_speed;    
-extern volatile int tach_pulse_count;
 extern bool motion_detected;
 
 extern float temp;

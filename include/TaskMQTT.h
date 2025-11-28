@@ -12,7 +12,6 @@
 #define TOPIC_AIR_QUALITY "home/bme688/air_quality"
 #define TOPIC_FAN_MODE "home/fan/mode"
 #define TOPIC_FAN_SPEED "home/fan/speed"
-#define TOPIC_FAN_RPM "home/fan/rpm"
 #define TOPIC_PIR "home/pir/motion"
 
 // Client MQTT

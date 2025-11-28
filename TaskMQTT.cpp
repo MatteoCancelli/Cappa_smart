@@ -71,7 +71,6 @@ void task_mqtt_publish(void *pvParameters)
 
   String last_mode = "";
   uint8_t last_speed = 255;
-  int last_rpm = -1;
 
   bool last_motion = false;
 
@@ -143,14 +142,6 @@ void task_mqtt_publish(void *pvParameters)
         }
 
         xSemaphoreGive(fan_mutex);
-      }
-
-      int rpm = (int)read_fan_rpm();
-      if (rpm != last_rpm && rpm >= 0)
-      {
-        sprintf(buffer, "%d", rpm);
-        mqttClient.publish(TOPIC_FAN_RPM, buffer, true);
-        last_rpm = rpm;
       }
 
       if (motion_detected != last_motion)

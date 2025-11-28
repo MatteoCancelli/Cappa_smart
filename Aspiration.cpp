@@ -23,29 +23,6 @@ static void ensure_fan_mutex()
   }
 }
 
-void IRAM_ATTR tachimetro_interrupt()
-{
-  tach_pulse_count++;
-}
-
-float read_fan_rpm()
-{
-  static unsigned long last_time = 0;
-  static int last_pulses = 0;
-
-  unsigned long now = millis();
-  if (now - last_time >= 1000)
-  {
-    int pulses = tach_pulse_count - last_pulses;
-    last_pulses = tach_pulse_count;
-    last_time = now;
-    const float impulses_per_rev = 2.0f;
-    float rpm = (pulses / impulses_per_rev) * 60.0f;
-    return rpm;
-  }
-  return -1.0f; // no update yet
-}
-
 void attuatore_ventola(int speed_wanted)
 {
   ensure_fan_mutex();
@@ -95,7 +72,7 @@ void task_toggle_mode(void *pvParameters)
 static void controllo_manuale_velocita()
 {
   int pot = analogRead(GPIO_POTENZIOMETRO);
-  int speed_wanted = map(pot, 0, 4095, 0, 255);
+  int speed_wanted = map(pot, 0, 4095, 0, 180);
   attuatore_ventola(speed_wanted);
 }
 
