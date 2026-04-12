@@ -11,7 +11,7 @@
 #include "include/TaskMQTT.h"
 
 
-#define GPIO_PIR 23
+#define GPIO_PIR 15
 #define GPIO_LAMP 5
 #define GPIO_POTENZIOMETRO 36
 #define GPIO_BTN_FAN_CONTROLLER 18
