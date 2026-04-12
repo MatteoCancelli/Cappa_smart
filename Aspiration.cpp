@@ -9,13 +9,14 @@
 #define WARMUP_MS (270000UL) // 4.5 minuti
 #endif
 
-// --- Helper: ensure mutex exists (call before using) ---
+#define SOFT_START_STEP     5    // incremento PWM per step
+#define SOFT_START_DELAY_MS 30   // ms tra uno step e l'altro
+
 static void ensure_fan_mutex()
 {
   if (fan_mutex == NULL)
   {
     fan_mutex = xSemaphoreCreateMutex();
-    // optional: check null and print if failed
     if (fan_mutex == NULL)
     {
       Serial.println("ERROR: failed to create fan_mutex");
@@ -26,13 +27,28 @@ static void ensure_fan_mutex()
 void attuatore_ventola(int speed_wanted)
 {
   ensure_fan_mutex();
-  if (xSemaphoreTake(fan_mutex, pdMS_TO_TICKS(50)) == pdTRUE)
+  if (xSemaphoreTake(fan_mutex, pdMS_TO_TICKS(200)) == pdTRUE)
   {
     if (target_fan_speed != speed_wanted)
     {
-      ledcWrite(GPIO_FAN_PWM, speed_wanted);
+      int current = target_fan_speed;
+      int step = (speed_wanted > current) ? SOFT_START_STEP : -SOFT_START_STEP;
+
+      while (current != speed_wanted)
+      {
+        current += step;
+        if ((step > 0 && current > speed_wanted) ||
+            (step < 0 && current < speed_wanted))
+          current = speed_wanted;
+
+        ledcWrite(GPIO_FAN_PWM, current);
+        xSemaphoreGive(fan_mutex);
+        vTaskDelay(pdMS_TO_TICKS(SOFT_START_DELAY_MS));
+        if (xSemaphoreTake(fan_mutex, pdMS_TO_TICKS(200)) != pdTRUE)
+          return;
+      }
+
       target_fan_speed = speed_wanted;
-      //Serial.printf("Velocita ventola impostata a %d\n", speed_wanted);
     }
     xSemaphoreGive(fan_mutex);
   }
@@ -72,7 +88,7 @@ void task_toggle_mode(void *pvParameters)
 static void controllo_manuale_velocita()
 {
   int pot = analogRead(GPIO_POTENZIOMETRO);
-  int speed_wanted = map(pot, 0, 4095, 0, 180);
+  int speed_wanted = map(pot, 0, 4095, 0, 255);
   attuatore_ventola(speed_wanted);
 }
 
@@ -123,11 +139,10 @@ void task_logica_ventola(void *pvParameters)
 
     // --- LOGICA AUTOMATICA ---
     bool condizione_accensione = (gas_index < 40.0f || hum > 75.0f || temp > 50.0f);
-    int speed_wanted = condizione_accensione ? 150 : 0;
+    int speed_wanted = condizione_accensione ? 180 : 0;
 
     attuatore_ventola(speed_wanted);
 
     vTaskDelay(loop_delay_normal);
   }
 }
-
