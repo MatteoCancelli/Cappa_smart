@@ -3,6 +3,7 @@
 #include <ArduinoJson.h>
 #include "config.h"
 #include "include/Globals.h"
+#include "include/Logic.h"
 
 void setup_wifi()
 {
@@ -157,54 +158,3 @@ void task_mqtt_publish(void *pvParameters)
     vTaskDelayUntil(&last_wake_time, frequency);
   }
 }
-
-// void task_mqtt_publish(void *pvParameters)
-// {
-//   TickType_t last_wake_time = xTaskGetTickCount();
-//   const TickType_t frequency = pdMS_TO_TICKS(5000);
-//   for (;;)
-//   {
-//     if (WiFi.status() != WL_CONNECTED)
-//     {
-//       Serial.println("WiFi disconnesso, riconnessione...");
-//       setup_wifi();
-//       vTaskDelay(pdMS_TO_TICKS(5000));
-//       continue;
-//     }
-//     if (!mqttClient.connected())
-//     {
-//       reconnect_mqtt();
-//     }
-//     mqttClient.loop();
-//     if (mqttClient.connected())
-//     {
-//       char buffer[64];
-//       dtostrf(temp, 5, 2, buffer);
-//       mqttClient.publish(TOPIC_TEMP, buffer);
-//       dtostrf(hum, 5, 2, buffer);
-//       mqttClient.publish(TOPIC_HUM, buffer);
-//       dtostrf(gas_index, 5, 2, buffer);
-//       mqttClient.publish(TOPIC_GAS, buffer);
-//       String air_msg = air_index_to_msg(gas_index);
-//       mqttClient.publish(TOPIC_AIR_QUALITY, air_msg.c_str());
-//       uint8_t current_speed = 0;
-//       if (xSemaphoreTake(fan_mutex, pdMS_TO_TICKS(100)) == pdTRUE)
-//       {
-//         current_speed = target_fan_speed;
-//         mqttClient.publish(TOPIC_FAN_MODE, mode_manual ? "manual" : "auto");
-//         xSemaphoreGive(fan_mutex);
-//       }
-//       sprintf(buffer, "%d", current_speed);
-//       mqttClient.publish(TOPIC_FAN_SPEED, buffer);
-//       float rpm = read_fan_rpm();
-//       if (rpm >= 0)
-//       {
-//         dtostrf(rpm, 6, 0, buffer);
-//         mqttClient.publish(TOPIC_FAN_RPM, buffer);
-//       }
-//       mqttClient.publish(TOPIC_PIR, motion_detected ? "detected" : "clear");
-//       // Serial.println("Dati MQTT pubblicati");
-//     }
-//     vTaskDelayUntil(&last_wake_time, frequency);
-//   }
-// }

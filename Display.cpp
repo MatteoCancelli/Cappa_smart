@@ -1,4 +1,5 @@
 #include "include/Globals.h"
+#include "include/Logic.h"
 #include <Adafruit_SSD1306.h>
 
 

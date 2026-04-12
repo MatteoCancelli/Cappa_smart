@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "include/Globals.h"
+#include "include/Logic.h"
 #include "esp32-hal-ledc.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -138,8 +139,7 @@ void task_logica_ventola(void *pvParameters)
     }
 
     // --- LOGICA AUTOMATICA ---
-    bool condizione_accensione = (gas_index < 40.0f || hum > 75.0f || temp > 50.0f);
-    int speed_wanted = condizione_accensione ? 180 : 0;
+    int speed_wanted = calcola_velocita_automatica(gas_index, hum, temp);
 
     attuatore_ventola(speed_wanted);
 
