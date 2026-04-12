@@ -1,6 +1,9 @@
 #include "include/Globals.h"
 
 void setup(){
+  pinMode(GPIO_FAN_PWM, OUTPUT);
+  digitalWrite(GPIO_FAN_PWM, LOW);
+
   setup_GPIO();
   Serial.begin(115200);
   Wire.begin();
@@ -33,6 +36,8 @@ void setup(){
   xTaskCreate(task_toggle_mode, "ToggleMode", 4096, NULL, 3, NULL);
 
   xTaskCreate(task_mqtt_publish, "MQTT_Publish", 4096, NULL, 2, NULL);
+
+  digitalWrite(GPIO_FAN_ENABLE, HIGH);
 }
 
 void loop(){
