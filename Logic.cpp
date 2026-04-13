@@ -19,9 +19,9 @@ float gas_to_AirQualityIndex(double gas_ohm)
 
 String air_index_to_msg(float iaq)
 {
-  if      (iaq < 50)  return "Aria fresca";
-  else if (iaq < 100) return "Aria normale";
-  else if (iaq < 150) return "Aria viziata";
-  else if (iaq < 200) return "Aria stantia";
-  else                return "Apri tutto";
+  if      (iaq <= 50)  return "Aria fresca";
+  else if (iaq <= 100) return "Aria normale";
+  else if (iaq <= 150) return "Aria viziata";
+  else if (iaq <= 200) return "Aria stantia";
+  else                 return "Apri tutto";
 }
