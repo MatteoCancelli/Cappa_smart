@@ -6,12 +6,8 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 
-#ifndef WARMUP_MS
-#define WARMUP_MS (270000UL) // 4.5 minuti
-#endif
-
-#define SOFT_START_STEP     5    // incremento PWM per step
-#define SOFT_START_DELAY_MS 30   // ms tra uno step e l'altro
+#define SOFT_START_STEP     5
+#define SOFT_START_DELAY_MS 30
 
 static void ensure_fan_mutex()
 {
@@ -93,32 +89,15 @@ static void controllo_manuale_velocita()
   attuatore_ventola(speed_wanted);
 }
 
-static bool warmup_delay(unsigned long start_time)
-{
-  if (gas_index >= 40.0f)
-  {
-    return true;
-  }
-  if (millis() - start_time >= WARMUP_MS)
-  {
-    Serial.println("Warmup completato");
-    return true;
-  }
-  return false;
-}
-
 void task_logica_ventola(void *pvParameters)
 {
   ensure_fan_mutex();
-  unsigned long start_time = millis();
-  bool warmup_done = false;
-  Serial.println("Warmup bme in corso...");
+  Serial.println("Logica ventola avviata");
 
   const TickType_t loop_delay_normal = pdMS_TO_TICKS(200);
 
   for (;;)
   {
-    // --- MANUALE SEMPRE DISPONIBILE ---
     if (mode_manual)
     {
       controllo_manuale_velocita();
@@ -126,21 +105,7 @@ void task_logica_ventola(void *pvParameters)
       continue;
     }
 
-    // --- AUTOMATICO: warmup obbligatorio ---
-    if (!warmup_delay(start_time) && !warmup_done)
-    {
-      attuatore_ventola(0);
-      vTaskDelay(loop_delay_normal);
-      continue;
-    }
-    else
-    {
-      warmup_done = true;
-    }
-
-    // --- LOGICA AUTOMATICA ---
     int speed_wanted = calcola_velocita_automatica(gas_index, hum, temp);
-
     attuatore_ventola(speed_wanted);
 
     vTaskDelay(loop_delay_normal);

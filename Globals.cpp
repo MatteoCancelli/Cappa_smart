@@ -12,7 +12,6 @@
 
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-Adafruit_BME680 bme;
 String msg_mod = "";
 
 SemaphoreHandle_t fan_mutex;

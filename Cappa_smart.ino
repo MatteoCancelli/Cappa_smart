@@ -14,11 +14,6 @@ void setup(){
   check_display();
   check_bme();
 
-  bme.setTemperatureOversampling(BME680_OS_8X);
-  bme.setHumidityOversampling(BME680_OS_2X);
-  bme.setPressureOversampling(BME680_OS_4X);
-  bme.setGasHeater(320, 150);
-
   setup_wifi();
 
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
@@ -27,7 +22,7 @@ void setup(){
   Serial.println("Inizio Task");
 
   // Task sensori e display
-  xTaskCreate(task_bme, "BME688", 4096, NULL, 2, NULL);
+  xTaskCreate(task_bme, "BME680", 4096, NULL, 2, NULL);
   xTaskCreate(task_display, "Display", 4096, NULL, 1, NULL);
   xTaskCreate(task_pir, "PIR", 4096, NULL, 3, NULL);
   

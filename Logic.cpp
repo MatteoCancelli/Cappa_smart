@@ -2,7 +2,7 @@
 
 int calcola_velocita_automatica(float gas, float humidity, float temperature)
 {
-  bool accensione = (gas < 40.0f || humidity > 75.0f || temperature > 50.0f);
+  bool accensione = (gas > 100.0f || humidity > 75.0f || temperature > 50.0f);
   return accensione ? 180 : 0;
 }
 
@@ -17,11 +17,11 @@ float gas_to_AirQualityIndex(double gas_ohm)
   return (gas_ohm - GAS_MIN) / (GAS_MAX - GAS_MIN) * 100.0f;
 }
 
-String air_index_to_msg(float quality_index)
+String air_index_to_msg(float iaq)
 {
-  if      (quality_index < 20) return "Apri tutto";
-  else if (quality_index < 40) return "Aria stantia";
-  else if (quality_index < 60) return "Aria viziata";
-  else if (quality_index < 80) return "Aria normale";
-  else                         return "Aria fresca";
+  if      (iaq < 50)  return "Aria fresca";
+  else if (iaq < 100) return "Aria normale";
+  else if (iaq < 150) return "Aria viziata";
+  else if (iaq < 200) return "Aria stantia";
+  else                return "Apri tutto";
 }
