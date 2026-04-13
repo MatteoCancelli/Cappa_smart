@@ -14,7 +14,7 @@ float gas_to_AirQualityIndex(double gas_ohm)
   if (gas_ohm < GAS_MIN) gas_ohm = GAS_MIN;
   if (gas_ohm > GAS_MAX) gas_ohm = GAS_MAX;
 
-  return (gas_ohm - GAS_MIN) / (GAS_MAX - GAS_MIN) * 100.0f;
+  return 100 - (gas_ohm - GAS_MIN) / (GAS_MAX - GAS_MIN) * 100.0f;
 }
 
 String air_index_to_msg(float iaq)
