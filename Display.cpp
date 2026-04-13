@@ -32,7 +32,7 @@ void wifi_error_msg(){
 void bme_error_msg(){
   display.clearDisplay();
   display.setCursor(0, 0);
-  display.println("ERRORE BME688");
+  display.println("ERRORE BME680");
   display.setCursor(0, 16);
   display.println("Controlla I2C!");
   display.display();
@@ -41,7 +41,7 @@ void bme_error_msg(){
 void bme_ok_msg(){
   display.clearDisplay();
   display.setCursor(0, 0);
-  display.println("BME688 OK");
+  display.println("BME680 OK");
   display.display();
 }
 
