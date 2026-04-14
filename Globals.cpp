@@ -22,6 +22,7 @@ bool motion_detected = false;
 float temp = 0;
 float hum = 0;
 float gas_index = 0;
+float iaq_raw = 0;
 
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);

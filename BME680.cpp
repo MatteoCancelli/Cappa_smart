@@ -66,14 +66,15 @@ void check_bme()
 void task_bme(void *pvParameters)
 {
   uint32_t save_counter = 0;
-
+  
   for (;;)
   {
     if (bsec.run())
     {
       temp      = bsec.temperature;
       hum       = bsec.humidity;
-      gas_index = bsec.iaq;
+      iaq_raw   = bsec.iaq;
+      gas_index = iaq_to_percentage(bsec.iaq);
 
       save_counter++;
       if (save_counter >= 300)

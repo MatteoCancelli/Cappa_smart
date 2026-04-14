@@ -38,6 +38,7 @@ extern bool motion_detected;
 extern float temp;
 extern float hum;
 extern float gas_index;
+extern float iaq_raw;
 
 void setup_GPIO();
 
