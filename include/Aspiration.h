@@ -1,5 +1,10 @@
 #pragma once
-#include "include/Globals.h"
+
+#ifdef UNIT_TEST
+  #include "test/Globals_test.h"
+#else
+  #include "include/Globals.h"
+#endif
 
 void attuatore_ventola(int speed_wanted);
 void task_toggle_mode(void *pvParameters);

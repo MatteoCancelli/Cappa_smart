@@ -1,10 +1,15 @@
-#include <Arduino.h>
-#include "include/Globals.h"
+#ifdef UNIT_TEST
+  #include "test/Globals_test.h"
+#else
+  #include <Arduino.h>
+  #include "include/Globals.h"
+  #include "esp32-hal-ledc.h"
+  #include "freertos/FreeRTOS.h"
+  #include "freertos/task.h"
+  #include "freertos/semphr.h"
+#endif
 #include "include/Logic.h"
-#include "esp32-hal-ledc.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/semphr.h"
+#include "include/HalInterface.h"
 
 #define SOFT_START_STEP     5
 #define SOFT_START_DELAY_MS 30
@@ -38,7 +43,7 @@ void attuatore_ventola(int speed_wanted)
             (step < 0 && current < speed_wanted))
           current = speed_wanted;
 
-        ledcWrite(GPIO_FAN_PWM, current);
+        hal.ledcWrite(GPIO_FAN_PWM, current);
         xSemaphoreGive(fan_mutex);
         vTaskDelay(pdMS_TO_TICKS(SOFT_START_DELAY_MS));
         if (xSemaphoreTake(fan_mutex, pdMS_TO_TICKS(200)) != pdTRUE)
@@ -58,7 +63,7 @@ void task_toggle_mode(void *pvParameters)
   const unsigned long debounce_ms = 50;
   for (;;)
   {
-    int st = digitalRead(GPIO_BTN_FAN_CONTROLLER);
+    int st = hal.digitalRead(GPIO_BTN_FAN_CONTROLLER);
     if (st != last_state)
     {
       last_debounce = millis();
@@ -71,7 +76,7 @@ void task_toggle_mode(void *pvParameters)
         if (stable_state == HIGH && st == LOW)
         {
           mode_manual = !mode_manual;
-          digitalWrite(GPIO_LED_FAN_CONTROLLER, mode_manual ? HIGH : LOW);
+          hal.digitalWrite(GPIO_LED_FAN_CONTROLLER, mode_manual ? HIGH : LOW);
           Serial.printf("Modalità: %s\n", mode_manual ? "MANUALE" : "AUTOMATICA");
         }
         stable_state = st;
@@ -84,7 +89,7 @@ void task_toggle_mode(void *pvParameters)
 
 static void controllo_manuale_velocita()
 {
-  int pot = analogRead(GPIO_POTENZIOMETRO);
+  int pot = hal.analogRead(GPIO_POTENZIOMETRO);
   int speed_wanted = map(pot, 0, 4095, 0, 255);
   attuatore_ventola(speed_wanted);
 }

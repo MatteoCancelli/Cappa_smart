@@ -1,6 +1,10 @@
 add_executable(test_logic
   test_logic.cpp
+  test_aspiration.cpp
   ../Logic.cpp
+  ../Aspiration.cpp
+  ../HalInterface.cpp
+  Globals_test.cpp
 )
 
 target_include_directories(test_logic PRIVATE
