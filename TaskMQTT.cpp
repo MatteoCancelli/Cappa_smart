@@ -1,9 +1,9 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
-#include <ArduinoJson.h>
 #include "config.h"
 #include "include/Globals.h"
 #include "include/Logic.h"
+#include "include/TaskMQTT.h"
 
 void setup_wifi()
 {
@@ -47,11 +47,8 @@ void reconnect_mqtt()
   if (!mqttClient.connected())
   {
     Serial.print("Connessione MQTT...");
-
     if (mqttClient.connect(MQTT_CLIENT_ID, MQTT_USER, MQTT_PASSWORD))
-    {
       Serial.println(" OK!");
-    }
     else
     {
       Serial.print(" FALLITA, rc=");
@@ -60,26 +57,26 @@ void reconnect_mqtt()
   }
 }
 
-void task_mqtt_publish(void *pvParameters)
+void task_mqtt(void* pvParameters)
 {
+  SystemState* state = (SystemState*)pvParameters;
+
   TickType_t last_wake_time = xTaskGetTickCount();
   const TickType_t frequency = pdMS_TO_TICKS(2000);
 
-  float last_temp = NAN;
-  float last_hum = NAN;
-  float last_gas = NAN;
-  String last_air = "";
-
-  String last_mode = "";
-  uint8_t last_speed = 255;
-
-  bool last_motion = false;
+  float    last_temperature     = NAN;
+  float    last_humidity        = NAN;
+  float    last_air_quality_pct = NAN;
+  float    last_iaq_score       = NAN;
+  String   last_air_msg         = "";
+  String   last_fan_mode        = "";
+  uint8_t  last_fan_speed       = 255;
+  bool     last_motion          = false;
 
   char buffer[64];
 
   for (;;)
   {
-
     if (WiFi.status() != WL_CONNECTED)
     {
       setup_wifi();
@@ -88,70 +85,71 @@ void task_mqtt_publish(void *pvParameters)
     }
 
     if (!mqttClient.connected())
-    {
       reconnect_mqtt();
-    }
 
     mqttClient.loop();
 
     if (mqttClient.connected())
     {
-
-      if (isnan(last_temp) || abs(temp - last_temp) > 0.05)
+      if (isnan(last_temperature) || abs(state->temperature - last_temperature) > 0.05f)
       {
-        dtostrf(temp, 5, 2, buffer);
+        dtostrf(state->temperature, 5, 2, buffer);
         mqttClient.publish(TOPIC_TEMP, buffer, true);
-        last_temp = temp;
+        last_temperature = state->temperature;
       }
 
-      if (isnan(last_hum) || abs(hum - last_hum) > 0.1)
+      if (isnan(last_humidity) || abs(state->humidity - last_humidity) > 0.1f)
       {
-        dtostrf(hum, 5, 2, buffer);
+        dtostrf(state->humidity, 5, 2, buffer);
         mqttClient.publish(TOPIC_HUM, buffer, true);
-        last_hum = hum;
+        last_humidity = state->humidity;
       }
 
-      if (isnan(last_gas) || abs(gas_index - last_gas) > 0.3)
+      if (isnan(last_air_quality_pct) || abs(state->air_quality_pct - last_air_quality_pct) > 0.3f)
       {
-        dtostrf(gas_index, 5, 2, buffer);
+        dtostrf(state->air_quality_pct, 5, 2, buffer);
         mqttClient.publish(TOPIC_GAS, buffer, true);
-        last_gas = gas_index;
+        last_air_quality_pct = state->air_quality_pct;
       }
 
-      String air_msg = air_index_to_msg(gas_index);
-      if (air_msg != last_air)
+      if (isnan(last_iaq_score) || abs(state->iaq_score - last_iaq_score) > 0.3f)
+      {
+        dtostrf(state->iaq_score, 5, 2, buffer);
+        mqttClient.publish(TOPIC_IAQ_RAW, buffer, true);
+        last_iaq_score = state->iaq_score;
+      }
+
+      String air_msg = air_index_to_msg(state->iaq_score);
+      if (air_msg != last_air_msg)
       {
         mqttClient.publish(TOPIC_AIR_QUALITY, air_msg.c_str(), true);
-        last_air = air_msg;
+        last_air_msg = air_msg;
       }
 
-      if (xSemaphoreTake(fan_mutex, pdMS_TO_TICKS(50)))
+      if (xSemaphoreTake(state->fan_mutex, pdMS_TO_TICKS(50)) == pdTRUE)
       {
-        String mode_msg = mode_manual ? "manual" : "auto";
-
-        if (mode_msg != last_mode)
+        String fan_mode = state->is_manual_mode ? "manual" : "auto";
+        if (fan_mode != last_fan_mode)
         {
-          mqttClient.publish(TOPIC_FAN_MODE, mode_msg.c_str(), true);
-          last_mode = mode_msg;
+          mqttClient.publish(TOPIC_FAN_MODE, fan_mode.c_str(), true);
+          last_fan_mode = fan_mode;
         }
 
-        if (target_fan_speed != last_speed)
+        if (state->fan_speed_target != last_fan_speed)
         {
-          sprintf(buffer, "%d", target_fan_speed);
+          sprintf(buffer, "%d", state->fan_speed_target);
           mqttClient.publish(TOPIC_FAN_SPEED, buffer, true);
-          last_speed = target_fan_speed;
+          last_fan_speed = state->fan_speed_target;
         }
 
-        xSemaphoreGive(fan_mutex);
+        xSemaphoreGive(state->fan_mutex);
       }
 
-      if (motion_detected != last_motion)
+      if (state->is_motion_detected != last_motion)
       {
-        mqttClient.publish(
-            TOPIC_PIR,
-            motion_detected ? "detected" : "clear",
-            true);
-        last_motion = motion_detected;
+        mqttClient.publish(TOPIC_PIR,
+          state->is_motion_detected ? "detected" : "clear", true);
+        last_motion = state->is_motion_detected;
       }
     }
 

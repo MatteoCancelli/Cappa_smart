@@ -1,8 +1,9 @@
 #pragma once
 #include "include/Globals.h"
+#include "include/SystemState.h"
 #include <bsec.h>
 
-extern Bsec bsec;
+extern Bsec bsec_sensor;
 
-void check_bme();
-void task_bme(void *pvParameters);
+void init_environment_sensor(SystemState* state);
+void task_environment_sensor(void* state);

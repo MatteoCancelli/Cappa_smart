@@ -1,4 +1,5 @@
 #pragma once
-#include "Globals.h"
+#include "include/Globals.h"
+#include "include/SystemState.h"
 
-void task_pir(void *pvParameters);
+void task_motion_sensor(void* state);

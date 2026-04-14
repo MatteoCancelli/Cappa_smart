@@ -4,7 +4,7 @@
 #include <bsec.h>
 #include <Preferences.h>
 
-Bsec bsec;
+Bsec bsec_sensor;
 Preferences prefs;
 
 #define BSEC_STATE_KEY "bsec_state"
@@ -17,7 +17,7 @@ static void load_bsec_state()
   {
     uint8_t state[BSEC_MAX_STATE_BLOB_SIZE];
     prefs.getBytes(BSEC_STATE_KEY, state, len);
-    bsec.setState(state);
+    bsec_sensor.setState(state);
     Serial.println("Stato BSEC caricato dalla flash");
   }
   else
@@ -30,20 +30,20 @@ static void load_bsec_state()
 static void save_bsec_state()
 {
   uint8_t state[BSEC_MAX_STATE_BLOB_SIZE];
-  bsec.getState(state);
+  bsec_sensor.getState(state);
   prefs.begin("bsec", false);
   prefs.putBytes(BSEC_STATE_KEY, state, BSEC_MAX_STATE_BLOB_SIZE);
   prefs.end();
   Serial.println("Stato BSEC salvato in flash");
 }
 
-void check_bme()
+void init_environment_sensor(SystemState* state)
 {
-  bsec.begin(BME68X_I2C_ADDR_LOW, Wire);
+  bsec_sensor.begin(BME68X_I2C_ADDR_LOW, Wire);
 
-  if (bsec.bsecStatus != BSEC_OK)
+  if (bsec_sensor.bsecStatus != BSEC_OK)
   {
-    Serial.println("Errore: BME680 non trovato!");
+    Serial.println("Errore: BME688 non trovato!");
     bme_error_msg();
     while (true);
   }
@@ -54,27 +54,28 @@ void check_bme()
     BSEC_OUTPUT_SENSOR_HEAT_COMPENSATED_HUMIDITY
   };
 
-  bsec.updateSubscription(sensor_list, 3, BSEC_SAMPLE_RATE_LP);
+  bsec_sensor.updateSubscription(sensor_list, 3, BSEC_SAMPLE_RATE_LP);
 
   load_bsec_state();
 
-  Serial.println("BME680 + BSEC OK!");
+  Serial.println("BME688 + BSEC OK!");
   bme_ok_msg();
   delay(1000);
 }
 
-void task_bme(void *pvParameters)
+void task_environment_sensor(void* pvParameters)
 {
+  SystemState* state = (SystemState*)pvParameters;
   uint32_t save_counter = 0;
-  
+
   for (;;)
   {
-    if (bsec.run())
+    if (bsec_sensor.run())
     {
-      temp      = bsec.temperature;
-      hum       = bsec.humidity;
-      iaq_raw   = bsec.iaq;
-      gas_index = iaq_to_percentage(bsec.iaq);
+      state->temperature     = bsec_sensor.temperature;
+      state->humidity        = bsec_sensor.humidity;
+      state->iaq_score       = bsec_sensor.iaq;
+      state->air_quality_pct = iaq_to_percentage(bsec_sensor.iaq);
 
       save_counter++;
       if (save_counter >= 300)
@@ -83,9 +84,9 @@ void task_bme(void *pvParameters)
         save_counter = 0;
       }
     }
-    else if (bsec.bsecStatus != BSEC_OK || bsec.bme68xStatus != BME68X_OK)
+    else if (bsec_sensor.bsecStatus != BSEC_OK || bsec_sensor.bme68xStatus != BME68X_OK)
     {
-      Serial.printf("Errore BSEC: %d BME: %d\n", bsec.bsecStatus, bsec.bme68xStatus);
+      Serial.printf("Errore BSEC: %d BME: %d\n", bsec_sensor.bsecStatus, bsec_sensor.bme68xStatus);
       bme_fail_msg();
     }
     vTaskDelay(pdMS_TO_TICKS(100));

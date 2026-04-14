@@ -11,10 +11,10 @@ HalInterface hal = { nullptr, nullptr, nullptr, nullptr };
 #include "esp32-hal-ledc.h"
 #include <Arduino.h>
 
-static void hal_ledc_write(uint8_t pin, uint32_t duty) { ledcWrite(pin, duty); }
-static int hal_digital_read(uint8_t pin) { return digitalRead(pin); }
-static void hal_digital_write(uint8_t pin, uint8_t val) { digitalWrite(pin, val); }
-static int hal_analog_read(uint8_t pin) { return analogRead(pin); }
+static void hal_ledc_write(uint8_t pin, uint32_t duty)   { ledcWrite(pin, duty); }
+static int  hal_digital_read(uint8_t pin)                { return digitalRead(pin); }
+static void hal_digital_write(uint8_t pin, uint8_t val)  { digitalWrite(pin, val); }
+static int  hal_analog_read(uint8_t pin)                 { return analogRead(pin); }
 
 HalInterface hal = {
   hal_ledc_write,

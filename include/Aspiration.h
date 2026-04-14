@@ -6,6 +6,6 @@
   #include "include/Globals.h"
 #endif
 
-void attuatore_ventola(int speed_wanted);
-void task_toggle_mode(void *pvParameters);
-void task_logica_ventola(void *pvParameters);
+void set_fan_speed(SystemState* state, int speed_wanted);
+void task_fan_control(void* state);
+void task_mode_button(void* state);

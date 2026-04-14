@@ -3,8 +3,8 @@
 int calcola_velocita_automatica(float iaq, float humidity, float temperature)
 {
   if (humidity > 75.0f || temperature > 50.0f) return 180;
-  if (iaq <= 100) return 0;
-  if (iaq <= 200) return 180;
+  if (iaq <= 100.0f) return 0;
+  if (iaq <= 200.0f) return 180;
   return 255;
 }
 
@@ -18,8 +18,8 @@ float iaq_to_percentage(float iaq)
   if (iaq < 0)   iaq = 0;
   if (iaq > 500) iaq = 500;
 
-  if      (iaq <= 50)  return mapf(iaq, 0,   50,  100, 80);
-  else if (iaq <= 100) return mapf(iaq, 50,  100,  80, 60);
+  if      (iaq <= 50)  return mapf(iaq,   0,  50, 100, 80);
+  else if (iaq <= 100) return mapf(iaq,  50, 100,  80, 60);
   else if (iaq <= 150) return mapf(iaq, 100, 150,  60, 40);
   else if (iaq <= 200) return mapf(iaq, 150, 200,  40, 25);
   else if (iaq <= 350) return mapf(iaq, 200, 350,  25, 10);

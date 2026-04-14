@@ -10,30 +10,29 @@
 #endif
 #include "include/Logic.h"
 #include "include/HalInterface.h"
+#include "include/Aspiration.h"
 
 #define SOFT_START_STEP     5
 #define SOFT_START_DELAY_MS 30
 
-static void ensure_fan_mutex()
+static void init_fan_mutex(SystemState* state)
 {
-  if (fan_mutex == NULL)
+  if (state->fan_mutex == NULL)
   {
-    fan_mutex = xSemaphoreCreateMutex();
-    if (fan_mutex == NULL)
-    {
+    state->fan_mutex = xSemaphoreCreateMutex();
+    if (state->fan_mutex == NULL)
       Serial.println("ERROR: failed to create fan_mutex");
-    }
   }
 }
 
-void attuatore_ventola(int speed_wanted)
+void set_fan_speed(SystemState* state, int speed_wanted)
 {
-  ensure_fan_mutex();
-  if (xSemaphoreTake(fan_mutex, pdMS_TO_TICKS(200)) == pdTRUE)
+  init_fan_mutex(state);
+  if (xSemaphoreTake(state->fan_mutex, pdMS_TO_TICKS(200)) == pdTRUE)
   {
-    if (target_fan_speed != speed_wanted)
+    if (state->fan_speed_target != (uint8_t)speed_wanted)
     {
-      int current = target_fan_speed;
+      int current = state->fan_speed_target;
       int step = (speed_wanted > current) ? SOFT_START_STEP : -SOFT_START_STEP;
 
       while (current != speed_wanted)
@@ -44,75 +43,81 @@ void attuatore_ventola(int speed_wanted)
           current = speed_wanted;
 
         hal.ledcWrite(GPIO_FAN_PWM, current);
-        xSemaphoreGive(fan_mutex);
+        xSemaphoreGive(state->fan_mutex);
         vTaskDelay(pdMS_TO_TICKS(SOFT_START_DELAY_MS));
-        if (xSemaphoreTake(fan_mutex, pdMS_TO_TICKS(200)) != pdTRUE)
+        if (xSemaphoreTake(state->fan_mutex, pdMS_TO_TICKS(200)) != pdTRUE)
           return;
       }
 
-      target_fan_speed = speed_wanted;
+      state->fan_speed_target = (uint8_t)speed_wanted;
     }
-    xSemaphoreGive(fan_mutex);
+    xSemaphoreGive(state->fan_mutex);
   }
 }
 
-void task_toggle_mode(void *pvParameters)
+static void update_fan_from_potentiometer(SystemState* state)
 {
-  int last_state = digitalRead(GPIO_BTN_FAN_CONTROLLER);
+  int pot = hal.analogRead(GPIO_POTENZIOMETRO);
+  int speed_wanted = map(pot, 0, 4095, 0, 255);
+  set_fan_speed(state, speed_wanted);
+}
+
+void task_mode_button(void* pvParameters)
+{
+  SystemState* state = (SystemState*)pvParameters;
+  int last_state = hal.digitalRead(GPIO_BTN_FAN_CONTROLLER);
   unsigned long last_debounce = 0;
   const unsigned long debounce_ms = 50;
+
   for (;;)
   {
-    int st = hal.digitalRead(GPIO_BTN_FAN_CONTROLLER);
-    if (st != last_state)
-    {
+    int current_btn = hal.digitalRead(GPIO_BTN_FAN_CONTROLLER);
+    if (current_btn != last_state)
       last_debounce = millis();
-    }
+
     if ((millis() - last_debounce) > debounce_ms)
     {
       static int stable_state = HIGH;
-      if (st != stable_state)
+      if (current_btn != stable_state)
       {
-        if (stable_state == HIGH && st == LOW)
+        if (stable_state == HIGH && current_btn == LOW)
         {
-          mode_manual = !mode_manual;
-          hal.digitalWrite(GPIO_LED_FAN_CONTROLLER, mode_manual ? HIGH : LOW);
-          Serial.printf("Modalità: %s\n", mode_manual ? "MANUALE" : "AUTOMATICA");
+          state->is_manual_mode = !state->is_manual_mode;
+          hal.digitalWrite(GPIO_LED_FAN_CONTROLLER, state->is_manual_mode ? HIGH : LOW);
+          Serial.printf("Modalità: %s\n", state->is_manual_mode ? "MANUALE" : "AUTOMATICA");
         }
-        stable_state = st;
+        stable_state = current_btn;
       }
     }
-    last_state = st;
+    last_state = current_btn;
     vTaskDelay(pdMS_TO_TICKS(20));
   }
 }
 
-static void controllo_manuale_velocita()
+void task_fan_control(void* pvParameters)
 {
-  int pot = hal.analogRead(GPIO_POTENZIOMETRO);
-  int speed_wanted = map(pot, 0, 4095, 0, 255);
-  attuatore_ventola(speed_wanted);
-}
-
-void task_logica_ventola(void *pvParameters)
-{
-  ensure_fan_mutex();
+  SystemState* state = (SystemState*)pvParameters;
+  init_fan_mutex(state);
   Serial.println("Logica ventola avviata");
 
-  const TickType_t loop_delay_normal = pdMS_TO_TICKS(200);
+  const TickType_t loop_delay = pdMS_TO_TICKS(200);
 
   for (;;)
   {
-    if (mode_manual)
+    if (state->is_manual_mode)
     {
-      controllo_manuale_velocita();
-      vTaskDelay(loop_delay_normal);
+      update_fan_from_potentiometer(state);
+      vTaskDelay(loop_delay);
       continue;
     }
 
-    int speed_wanted = calcola_velocita_automatica(gas_index, hum, temp);
-    attuatore_ventola(speed_wanted);
+    int speed = calcola_velocita_automatica(
+      state->iaq_score,
+      state->humidity,
+      state->temperature
+    );
+    set_fan_speed(state, speed);
 
-    vTaskDelay(loop_delay_normal);
+    vTaskDelay(loop_delay);
   }
 }
