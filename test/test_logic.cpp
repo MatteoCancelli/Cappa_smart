@@ -62,25 +62,33 @@ TEST(AirIndexToMsg, VentilaSubito) {
 }
 
 TEST(CalcolaVelocita, IaqNormale) {
-  EXPECT_EQ(calcola_velocita_automatica(50.0f, 50.0f, 25.0f), 0);
+  EXPECT_EQ(calcola_velocita_automatica(50.0f, 50.0f, 25.0f, 3), 0);
 }
 
 TEST(CalcolaVelocita, IaqMedio) {
-  EXPECT_EQ(calcola_velocita_automatica(150.0f, 50.0f, 25.0f), 180);
+  EXPECT_EQ(calcola_velocita_automatica(150.0f, 50.0f, 25.0f, 3), 180);
 }
 
 TEST(CalcolaVelocita, IaqAlto) {
-  EXPECT_EQ(calcola_velocita_automatica(250.0f, 50.0f, 25.0f), 255);
+  EXPECT_EQ(calcola_velocita_automatica(250.0f, 50.0f, 25.0f, 3), 255);
 }
 
 TEST(CalcolaVelocita, UmiditaAlta) {
-  EXPECT_EQ(calcola_velocita_automatica(50.0f, 80.0f, 25.0f), 180);
+  EXPECT_EQ(calcola_velocita_automatica(50.0f, 80.0f, 25.0f, 3), 180);
 }
 
 TEST(CalcolaVelocita, TemperaturaAlta) {
-  EXPECT_EQ(calcola_velocita_automatica(50.0f, 50.0f, 60.0f), 180);
+  EXPECT_EQ(calcola_velocita_automatica(50.0f, 50.0f, 60.0f, 3), 180);
 }
 
 TEST(CalcolaVelocita, TuttoNormale) {
-  EXPECT_EQ(calcola_velocita_automatica(50.0f, 50.0f, 25.0f), 0);
+  EXPECT_EQ(calcola_velocita_automatica(50.0f, 50.0f, 25.0f, 3), 0);
+}
+
+TEST(CalcolaVelocita, AccuratezzaBassa) {
+  EXPECT_EQ(calcola_velocita_automatica(250.0f, 50.0f, 25.0f, 1), 0);
+}
+
+TEST(CalcolaVelocita, AccuratezzaZero) {
+  EXPECT_EQ(calcola_velocita_automatica(250.0f, 50.0f, 25.0f, 0), 0);
 }

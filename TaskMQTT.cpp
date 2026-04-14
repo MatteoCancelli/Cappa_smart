@@ -4,6 +4,7 @@
 #include "include/Globals.h"
 #include "include/Logic.h"
 #include "include/TaskMQTT.h"
+#include "include/BME680.h"
 
 void setup_wifi()
 {
@@ -150,6 +151,13 @@ void task_mqtt(void* pvParameters)
         mqttClient.publish(TOPIC_PIR,
           state->is_motion_detected ? "detected" : "clear", true);
         last_motion = state->is_motion_detected;
+      }
+      static uint8_t last_accuracy = 255;
+      if (bsec_sensor.iaqAccuracy != last_accuracy)
+      {
+        sprintf(buffer, "%d", bsec_sensor.iaqAccuracy);
+        mqttClient.publish(TOPIC_IAQ_ACCURACY, buffer, true);
+        last_accuracy = bsec_sensor.iaqAccuracy;
       }
     }
 

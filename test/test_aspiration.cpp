@@ -14,13 +14,21 @@ class AspirationTest : public ::testing::Test {
 protected:
   SystemState state;
   void SetUp() override {
-    hal.ledcWrite    = mock_ledcWrite;
-    hal.digitalRead  = mock_digitalRead;
-    hal.digitalWrite = mock_digitalWrite;
-    hal.analogRead   = mock_analogRead;
-    last_ledc_duty   = 0;
-    mock_analog_value = 0;
-    state = { 0, 0, 0, 0, false, false, 0, nullptr };
+  hal.ledcWrite    = mock_ledcWrite;
+  hal.digitalRead  = mock_digitalRead;
+  hal.digitalWrite = mock_digitalWrite;
+  hal.analogRead   = mock_analogRead;
+  last_ledc_duty   = 0;
+  mock_analog_value = 0;
+  state.temperature        = 0;
+  state.humidity           = 0;
+  state.air_quality_pct    = 0;
+  state.iaq_score          = 0;
+  state.iaq_accuracy       = 0;
+  state.is_motion_detected = false;
+  state.is_manual_mode     = false;
+  state.fan_speed_target   = 0;
+  state.fan_mutex          = nullptr;
   }
 };
 

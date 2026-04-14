@@ -1,8 +1,9 @@
 #include "include/Logic.h"
 
-int calcola_velocita_automatica(float iaq, float humidity, float temperature)
+int calcola_velocita_automatica(float iaq, float humidity, float temperature, uint8_t iaq_accuracy)
 {
   if (humidity > 75.0f || temperature > 50.0f) return 180;
+  if (iaq_accuracy < 2) return 0;
   if (iaq <= 100.0f) return 0;
   if (iaq <= 200.0f) return 180;
   return 255;

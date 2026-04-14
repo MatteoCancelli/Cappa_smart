@@ -10,6 +10,7 @@
 #define TOPIC_GAS         "home/bme688/air_quality_pct"
 #define TOPIC_IAQ_RAW     "home/bme688/iaq_score"
 #define TOPIC_AIR_QUALITY "home/bme688/air_quality_msg"
+#define TOPIC_IAQ_ACCURACY "home/bme688/iaq_accuracy"
 #define TOPIC_FAN_MODE    "home/fan/mode"
 #define TOPIC_FAN_SPEED   "home/fan/speed"
 #define TOPIC_PIR         "home/pir/motion"

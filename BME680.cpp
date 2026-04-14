@@ -74,7 +74,7 @@ void task_environment_sensor(void* pvParameters)
     {
       state->temperature     = bsec_sensor.temperature;
       state->humidity        = bsec_sensor.humidity;
-      state->iaq_score       = bsec_sensor.iaq;
+      state->iaq_accuracy    = bsec_sensor.iaqAccuracy;
       state->air_quality_pct = iaq_to_percentage(bsec_sensor.iaq);
 
       save_counter++;

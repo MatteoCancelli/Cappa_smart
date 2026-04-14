@@ -13,6 +13,7 @@ struct SystemState {
   float humidity;
   float air_quality_pct;
   float iaq_score;
+  uint8_t iaq_accuracy;
   bool is_motion_detected;
   bool is_manual_mode;
   uint8_t fan_speed_target;

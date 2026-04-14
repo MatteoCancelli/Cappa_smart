@@ -114,7 +114,8 @@ void task_fan_control(void* pvParameters)
     int speed = calcola_velocita_automatica(
       state->iaq_score,
       state->humidity,
-      state->temperature
+      state->temperature,
+      state->iaq_accuracy
     );
     set_fan_speed(state, speed);
 
