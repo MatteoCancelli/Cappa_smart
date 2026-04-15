@@ -67,6 +67,7 @@ void task_environment_sensor(void* pvParameters)
 {
   SystemState* state = (SystemState*)pvParameters;
   uint32_t save_counter = 0;
+  TickType_t last_wake_time = xTaskGetTickCount();
 
   for (;;)
   {
@@ -74,6 +75,7 @@ void task_environment_sensor(void* pvParameters)
     {
       state->temperature     = bsec_sensor.temperature;
       state->humidity        = bsec_sensor.humidity;
+      state->iaq_score       = bsec_sensor.iaq;
       state->iaq_accuracy    = bsec_sensor.iaqAccuracy;
       state->air_quality_pct = iaq_to_percentage(bsec_sensor.iaq);
 
@@ -89,6 +91,6 @@ void task_environment_sensor(void* pvParameters)
       Serial.printf("Errore BSEC: %d BME: %d\n", bsec_sensor.bsecStatus, bsec_sensor.bme68xStatus);
       bme_fail_msg();
     }
-    vTaskDelay(pdMS_TO_TICKS(100));
+    vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(100));
   }
 }

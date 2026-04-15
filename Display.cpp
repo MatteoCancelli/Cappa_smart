@@ -115,7 +115,7 @@ void task_display_update(void* pvParameters)
     display.setCursor(0, 48);
     display.setTextSize(2);
 
-    String msg = air_index_to_msg(state->iaq_score);
+    String msg = air_index_to_msg(state->iaq_score, state->iaq_accuracy);
     if (scrolling_message.length() < 10)
       scrolling_message = msg;
 

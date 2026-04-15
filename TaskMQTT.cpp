@@ -120,7 +120,7 @@ void task_mqtt(void* pvParameters)
         last_iaq_score = state->iaq_score;
       }
 
-      String air_msg = air_index_to_msg(state->iaq_score);
+      String air_msg = air_index_to_msg(state->iaq_score, state->iaq_accuracy);
       if (air_msg != last_air_msg)
       {
         mqttClient.publish(TOPIC_AIR_QUALITY, air_msg.c_str(), true);

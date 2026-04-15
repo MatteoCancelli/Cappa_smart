@@ -37,28 +37,33 @@ TEST(IaqToPercentage, ClampSotto) {
   EXPECT_FLOAT_EQ(iaq_to_percentage(-10), 100.0f);
 }
 
+TEST(AirIndexToMsg, Calibrazione) {
+  EXPECT_EQ(air_index_to_msg(25, 0), "Calibrazione...");
+  EXPECT_EQ(air_index_to_msg(25, 1), "Calibrazione...");
+}
+
 TEST(AirIndexToMsg, AriaPulita) {
-  EXPECT_EQ(air_index_to_msg(25), "Aria pulita");
+  EXPECT_EQ(air_index_to_msg(25, 2), "Aria pulita");
 }
 
 TEST(AirIndexToMsg, AriaOk) {
-  EXPECT_EQ(air_index_to_msg(75), "Aria ok");
+  EXPECT_EQ(air_index_to_msg(75, 2), "Aria ok");
 }
 
 TEST(AirIndexToMsg, OdoriRilevati) {
-  EXPECT_EQ(air_index_to_msg(125), "Odori rilevati");
+  EXPECT_EQ(air_index_to_msg(125, 2), "Odori rilevati");
 }
 
 TEST(AirIndexToMsg, AriaStantia) {
-  EXPECT_EQ(air_index_to_msg(175), "Aria stantia");
+  EXPECT_EQ(air_index_to_msg(175, 2), "Aria stantia");
 }
 
 TEST(AirIndexToMsg, ApriFinestre) {
-  EXPECT_EQ(air_index_to_msg(300), "Apri finestre");
+  EXPECT_EQ(air_index_to_msg(300, 2), "Apri finestre");
 }
 
 TEST(AirIndexToMsg, VentilaSubito) {
-  EXPECT_EQ(air_index_to_msg(400), "Ventila subito");
+  EXPECT_EQ(air_index_to_msg(400, 2), "Ventila subito");
 }
 
 TEST(CalcolaVelocita, IaqNormale) {

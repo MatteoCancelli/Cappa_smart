@@ -3,4 +3,4 @@
 
 int calcola_velocita_automatica(float iaq, float humidity, float temperature, uint8_t iaq_accuracy);
 float iaq_to_percentage(float iaq);
-String air_index_to_msg(float iaq);
+String air_index_to_msg(float iaq, uint8_t iaq_accuracy);

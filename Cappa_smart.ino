@@ -22,7 +22,7 @@ void setup()
 
   Serial.println("Avvio task...");
 
-  xTaskCreate(task_environment_sensor, "EnvSensor",  4096, &system_state, 2, NULL);
+  xTaskCreate(task_environment_sensor, "EnvSensor",   4096, &system_state, 4, NULL);  
   xTaskCreate(task_display_update,     "Display",     4096, &system_state, 1, NULL);
   xTaskCreate(task_motion_sensor,      "MotionSensor",4096, &system_state, 3, NULL);
   xTaskCreate(task_fan_control,        "FanControl",  4096, &system_state, 2, NULL);

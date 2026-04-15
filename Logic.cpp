@@ -27,8 +27,9 @@ float iaq_to_percentage(float iaq)
   else                 return mapf(iaq, 350, 500,  10,  0);
 }
 
-String air_index_to_msg(float iaq)
+String air_index_to_msg(float iaq, uint8_t iaq_accuracy)
 {
+  if (iaq_accuracy < 2) return "Calibrazione...";
   if      (iaq <= 50)  return "Aria pulita";
   else if (iaq <= 100) return "Aria ok";
   else if (iaq <= 150) return "Odori rilevati";
