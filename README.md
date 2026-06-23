@@ -2,6 +2,15 @@
 
 Progetto per ESP32 che controlla una cappa cucina in modo automatico, leggendo qualità dell'aria, temperatura e umidità tramite BME688 con libreria BSEC, e pubblicando i dati via MQTT.
 
+Video PIR e lampadina 220V
+https://github.com/user-attachments/assets/f22f8ba5-24f7-42c1-886e-69942d5f7077
+
+Video controllo ventola manuale
+https://github.com/user-attachments/assets/dfc00fec-04e0-4001-94d2-e80c80f63536
+
+Video gas che attiva controllo ventola automatico
+https://github.com/user-attachments/assets/95822e8e-2c92-4ab5-bdcb-10680869e06a
+
 ## Caratteristiche
 
 - Calcolo IAQ (Indoor Air Quality) calibrato tramite libreria BSEC2 di Bosch
@@ -30,18 +39,15 @@ Progetto per ESP32 che controlla una cappa cucina in modo automatico, leggendo q
 | MOSFET | 2N7000 N-channel - interruttore GND ventola | Drain → GND ventola, Source → GND, Gate → GPIO33 |
 | Resistenza pull-down | 10 kΩ | Gate 2N7000 → GND |
 | Relay | SRD-05VDC-SL-C | GPIO5 → lampadina 220V |
-| Step-Up | MT3608 | 5V → 12V |
-| Modulo alimentazione breadboard | Output 3.3V e 5V | - |
+| Alimentatore Switching 12V 3A Stabilizzato | ALIM3ASW | 220V → 12V |
+| Convertitore Buck Step Down to DC 5V |  | 12V → 5V |
 | Potenziometro | B10K | GPIO36 (ADC1 - ADC2 condiviso con WiFi) |
 | Pulsante | - | GPIO18 |
 | LED + Resistenza | LED + 1 kΩ | GPIO19 |
-| Condensatore elettrolitico | 4700 µF, 16V - bulk lato 5V (ingresso step-up) | tra 5V e GND, vicino al MT3608 |
-| Condensatore elettrolitico | 1000 µF, 25V - bulk lato 12V (uscita step-up) | tra 12V e GND, vicino alla ventola |
-| Condensatore elettrolitico | 100 µF, 10V - stabilizzazione rail 3.3V | tra 3.3V e GND, vicino all'uscita del modulo alimentazione |
-| Condensatori ceramici bypass | 100 nF, 50V (MLCC "104") - ×3 min, ×5 consigliati | uno in parallelo a ciascun elettrolitico |
 
 ---
-
+![Schema collegamenti](docs/circuito_wokwi.png)
+![Schema collegamenti](docs/Circuito.jpg)
 ## Struttura del progetto
 
 ```
@@ -90,6 +96,7 @@ Cappa_smart/
 | `home/fan/speed` | Velocità ventola 0–255 |
 | `home/pir/motion` | `detected` / `clear` |
 
+![MQTT](docs/MQTT.png)
 ---
 
 ## Scala qualità dell'aria
@@ -173,11 +180,10 @@ Copertura attuale:
 
 ## Note hardware
 
-- **Brown-out**: risolto con soft-start PWM (rampa 5 step ogni 30ms) + condensatori di bulk + MOSFET 2N7000 sul GND ventola
 - **Boot ventola**: il 2N7000 con pull-down 10kΩ sul Gate mantiene la ventola spenta durante il boot; `GPIO_FAN_ENABLE` viene portato HIGH solo a fine setup
 - **BSEC calibrazione**: richiede ~5 minuti per accuratezza 2, alcune ore per accuratezza 3; lo stato viene salvato in NVS ogni 15 minuti circa
 - **ADC**: usare solo pin ADC1 (GPIO32–39) con WiFi attivo; ADC2 è condiviso con il modulo WiFi
-- **Alimentazione**: testato con alimentatore USB 5V 2.4A; i condensatori stabilizzano i picchi di corrente durante l'accelerazione della ventola
+- **Alimentazione**: state attenti con la 220V
 
 ---
 
