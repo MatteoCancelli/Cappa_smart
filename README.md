@@ -186,7 +186,3 @@ Copertura attuale:
 - **Alimentazione**: state attenti con la 220V
 
 ---
-
-## Licenza
-
-MIT License - libero per uso personale e comunitario, attribuzione gradita.
