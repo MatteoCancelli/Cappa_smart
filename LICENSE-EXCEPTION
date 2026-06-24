@@ -1,0 +1,24 @@
+Cappa_smart Linking Exception
+
+Copyright (C) 2026 Matteo Cancelli
+
+As a special exception to the GNU General Public License version 3
+("GPL"), the copyright holder of Cappa_smart grants you the additional
+permission to link the code of this program with the Bosch Sensortec
+BSEC (Bosch Software Environmental Cluster) library, distributed under
+the Bosch BSEC Software License Agreement, and to distribute the
+resulting combined binary under terms of your choice for that
+combination, provided that you also meet, for each linked piece of
+proprietary software, the terms and conditions of the license of that
+piece of software.
+
+You must, for the GPL-covered part of this program (Cappa_smart itself,
+excluding the Bosch BSEC library), comply with the GNU General Public
+License version 3 in all other respects.
+
+This exception does not invalidate any other reason why the resulting
+binary file might be covered by the GNU General Public License.
+
+If you modify this file, you may extend this exception to your version
+of the file, but you are not obligated to do so. If you do not wish to
+do so, delete this exception statement from your version.
